@@ -1,103 +1,280 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import React, { useState } from "react";
+import MatchSetup from "../components/MatchSetup";
+import CurrentMatchHeader from "../components/CurrentMatchHeader";
+import TeamScore from "../components/TeamScore";
+import StatsSummary from "../components/StatsSummary";
+import SquadManagement from "../components/SquadManagement";
+import PlayerStats from "../components/PlayerStats";
+import MatchHistory from "../components/MatchHistory";
+import { usePlayers, useMatches, useStats } from "../hooks/useApi";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+// Using the seeded user ID from the database
+const USER_ID = "test-user-id";
+
+const FootballTracker = () => {
+  // API-based state management
+  const {
+    players,
+    loading: playersLoading,
+    error: playersError,
+    addPlayer,
+    removePlayer,
+  } = usePlayers(USER_ID);
+
+  const {
+    matches,
+    loading: matchesLoading,
+    error: matchesError,
+    addMatch,
+  } = useMatches(USER_ID);
+
+  const { stats, loading: statsLoading } = useStats(USER_ID);
+
+  // Local state for current match (not stored in DB until finished)
+  const [currentMatch, setCurrentMatch] = useState<{
+    id: string;
+    opponent: string;
+    date: string;
+    goalsFor: number;
+    goalsAgainst: number;
+    playerStats: Array<{
+      playerId: string;
+      playerName: string;
+      goals: number;
+      assists: number;
+    }>;
+  } | null>(null);
+
+  const [teamScore, setTeamScore] = useState({ for: 0, against: 0 });
+
+  // Handle adding a new player
+  const handleAddPlayer = async (name: string) => {
+    try {
+      await addPlayer(name);
+    } catch (error) {
+      console.error("Failed to add player:", error);
+    }
+  };
+
+  // Handle removing a player
+  const handleRemovePlayer = async (playerId: string) => {
+    try {
+      await removePlayer(playerId);
+    } catch (error) {
+      console.error("Failed to remove player:", error);
+    }
+  };
+
+  // Handle updating player stats during a match
+  const handleUpdatePlayerStat = async (
+    playerId: string,
+    stat: "goals" | "assists",
+    increment: number
+  ) => {
+    if (!currentMatch) return;
+
+    // Update local current match state
+    setCurrentMatch((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        playerStats: prev.playerStats.map((playerStat) =>
+          playerStat.playerId === playerId
+            ? {
+                ...playerStat,
+                [stat]: Math.max(0, playerStat[stat] + increment),
+              }
+            : playerStat
+        ),
+      };
+    });
+
+    // Automatically update team score when goals are added/removed
+    if (stat === "goals") {
+      setTeamScore((prev) => ({
+        ...prev,
+        for: Math.max(0, prev.for + increment),
+      }));
+    }
+  };
+
+  // Handle updating team score
+  const handleUpdateTeamScore = (
+    type: "for" | "against",
+    increment: number
+  ) => {
+    setTeamScore((prev) => ({
+      ...prev,
+      [type]: Math.max(0, prev[type] + increment),
+    }));
+  };
+
+  // Handle starting a new match
+  const handleStartNewMatch = async (opponent: string) => {
+    if (players.length === 0) {
+      alert(
+        "Please add at least one player to your squad before starting a match"
+      );
+      return;
+    }
+
+    const matchId = `match-${Date.now()}`;
+    const newMatch = {
+      id: matchId,
+      opponent,
+      date: new Date().toISOString(),
+      goalsFor: 0,
+      goalsAgainst: 0,
+      playerStats: players.map((player) => ({
+        playerId: player.id,
+        playerName: player.name,
+        goals: 0,
+        assists: 0,
+      })),
+    };
+
+    setCurrentMatch(newMatch);
+    setTeamScore({ for: 0, against: 0 });
+  };
+
+  // Handle finishing a match
+  const handleFinishMatch = async () => {
+    if (!currentMatch) return;
+
+    try {
+      const finalMatch = {
+        ...currentMatch,
+        goalsFor: teamScore.for,
+        goalsAgainst: teamScore.against,
+        isFinished: true,
+        playerStats: currentMatch.playerStats.map((stat) => ({
+          playerId: stat.playerId,
+          goals: stat.goals,
+          assists: stat.assists,
+        })),
+      };
+
+      await addMatch(finalMatch);
+      setCurrentMatch(null);
+      setTeamScore({ for: 0, against: 0 });
+    } catch (error) {
+      console.error("Failed to finish match:", error);
+    }
+  };
+
+  // Show loading state
+  if (playersLoading || matchesLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </div>
+    );
+  }
+
+  // Show error state
+  if (playersError || matchesError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h2 className="text-red-800 font-semibold">Error</h2>
+            <p className="text-red-700">{playersError || matchesError}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
+            ⚽ Grassroots Football Tracker
+          </h1>
+          <p className="text-center text-gray-600">
+            Track your team&apos;s performance
+          </p>
+        </div>
+
+        {/* Current Match or Match Setup */}
+        {!currentMatch ? (
+          <MatchSetup onStartNewMatch={handleStartNewMatch} players={players} />
+        ) : (
+          <CurrentMatchHeader
+            currentMatch={currentMatch}
+            onFinishMatch={handleFinishMatch}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        )}
+
+        {/* Team Score */}
+        {currentMatch && (
+          <TeamScore
+            teamScore={teamScore}
+            opponent={currentMatch.opponent}
+            onUpdateTeamScore={handleUpdateTeamScore}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        )}
+
+        {/* Stats Summary */}
+        <StatsSummary
+          currentMatch={currentMatch}
+          players={players}
+          matches={matches.map((match) => ({
+            ...match,
+            playerStats: match.playerStats.map((stat) => ({
+              playerId: stat.playerId,
+              playerName: stat.player?.name || "Unknown Player",
+              goals: stat.goals,
+              assists: stat.assists,
+            })),
+          }))}
+        />
+
+        {/* Squad Management */}
+        <SquadManagement
+          players={players}
+          onAddPlayer={handleAddPlayer}
+          onRemovePlayer={handleRemovePlayer}
+        />
+
+        {/* Players List */}
+        {currentMatch && (
+          <PlayerStats
+            players={currentMatch.playerStats.map((stat) => ({
+              id: stat.playerId,
+              name: stat.playerName,
+              goals: stat.goals,
+              assists: stat.assists,
+            }))}
+            onUpdatePlayerStat={handleUpdatePlayerStat}
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        )}
+
+        {/* Match History */}
+        {matches.length > 0 && (
+          <MatchHistory
+            matches={matches.map((match) => ({
+              ...match,
+              playerStats: match.playerStats.map((stat) => ({
+                playerId: stat.playerId,
+                playerName: stat.player?.name || "Unknown Player",
+                goals: stat.goals,
+                assists: stat.assists,
+              })),
+            }))}
+          />
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default FootballTracker;

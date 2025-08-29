@@ -18,7 +18,21 @@ export interface Match {
   date: string;
   goalsFor: number;
   goalsAgainst: number;
+  isFinished: boolean;
+  matchType: "league" | "cup";
+  notes?: string;
+  selectedPlayerIds: string[];
   playerStats: PlayerStat[];
+}
+
+export interface ScheduledMatch {
+  id: string;
+  opponent: string;
+  date: string;
+  matchType: "league" | "cup";
+  notes?: string;
+  selectedPlayerIds: string[];
+  isFinished: boolean;
 }
 
 export interface TeamScore {

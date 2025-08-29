@@ -20,6 +20,9 @@ export interface ApiMatch {
   goalsFor: number;
   goalsAgainst: number;
   isFinished: boolean;
+  matchType: string;
+  notes?: string;
+  selectedPlayerIds: string[];
   userId: string;
   playerStats: ApiPlayerMatchStat[];
 }
@@ -91,6 +94,10 @@ export const matchApi = {
     date?: string;
     goalsFor?: number;
     goalsAgainst?: number;
+    matchType?: string;
+    notes?: string;
+    selectedPlayerIds?: string[];
+    isFinished?: boolean;
     userId: string;
     playerStats?: Array<{ playerId: string; goals?: number; assists?: number }>;
   }): Promise<ApiMatch> {

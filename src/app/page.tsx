@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import MatchSetup from "../components/MatchSetup";
+import MatchScheduler from "../components/MatchScheduler";
+import ScheduledMatches from "../components/ScheduledMatches";
 import CurrentMatchHeader from "../components/CurrentMatchHeader";
 import TeamScore from "../components/TeamScore";
 import StatsSummary from "../components/StatsSummary";
-import SquadManagement from "../components/SquadManagement";
 import PlayerStats from "../components/PlayerStats";
 import { usePlayers, useMatches } from "../hooks/useApi";
-import { Player } from "../types";
+import { Player, ScheduledMatch } from "../types";
 
 // Using the seeded user ID from the database
 const USER_ID = "test-user-id";
@@ -37,6 +38,9 @@ const FootballTracker = () => {
     date: string;
     goalsFor: number;
     goalsAgainst: number;
+    isFinished: boolean;
+    matchType: "league" | "cup";
+    selectedPlayerIds: string[];
     playerStats: Array<{
       playerId: string;
       playerName: string;
@@ -126,6 +130,9 @@ const FootballTracker = () => {
       date: new Date().toISOString(),
       goalsFor: 0,
       goalsAgainst: 0,
+      isFinished: false,
+      matchType: "league" as const,
+      selectedPlayerIds: selectedPlayers.map((p) => p.id),
       playerStats: selectedPlayers.map((player) => ({
         playerId: player.id,
         playerName: player.name,
@@ -162,6 +169,76 @@ const FootballTracker = () => {
       console.error("Failed to finish match:", error);
     }
   };
+
+  // Handle scheduling a new match
+  const handleScheduleMatch = async (matchData: {
+    opponent: string;
+    date: string;
+    matchType: "league" | "cup";
+    notes?: string;
+    selectedPlayerIds: string[];
+  }) => {
+    try {
+      await addMatch({
+        ...matchData,
+        isFinished: false,
+        goalsFor: 0,
+        goalsAgainst: 0,
+      });
+    } catch (error) {
+      console.error("Failed to schedule match:", error);
+    }
+  };
+
+  // Handle starting a scheduled match
+  const handleStartScheduledMatch = (scheduledMatch: ScheduledMatch) => {
+    const selectedPlayers = players.filter((player) =>
+      scheduledMatch.selectedPlayerIds.includes(player.id)
+    );
+
+    const matchId = `match-${Date.now()}`;
+    const newMatch = {
+      id: matchId,
+      opponent: scheduledMatch.opponent,
+      date: new Date().toISOString(),
+      goalsFor: 0,
+      goalsAgainst: 0,
+      isFinished: false,
+      matchType: scheduledMatch.matchType,
+      selectedPlayerIds: scheduledMatch.selectedPlayerIds,
+      playerStats: selectedPlayers.map((player) => ({
+        playerId: player.id,
+        playerName: player.name,
+        goals: 0,
+        assists: 0,
+      })),
+    };
+
+    setCurrentMatch(newMatch);
+    setTeamScore({ for: 0, against: 0 });
+  };
+
+  // Handle deleting a scheduled match
+  const handleDeleteScheduledMatch = async (matchId: string) => {
+    // This will be implemented when we add the delete functionality to the API
+    console.log("Delete match:", matchId);
+  };
+
+  // Get scheduled matches (not yet started)
+  const scheduledMatches: ScheduledMatch[] = useMemo(() => {
+    return matches
+      .filter((match) => !match.isFinished)
+      .map((match) => ({
+        id: match.id,
+        opponent: match.opponent,
+        date: match.date,
+        matchType: match.matchType as "league" | "cup",
+        notes: match.notes,
+        selectedPlayerIds: match.selectedPlayerIds || [],
+        isFinished: match.isFinished,
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [matches]);
 
   // Show loading state
   if (playersLoading || matchesLoading) {
@@ -203,6 +280,24 @@ const FootballTracker = () => {
           </p>
         </div>
 
+        {/* Match Scheduler - only show when no current match */}
+        {!currentMatch && (
+          <MatchScheduler
+            onScheduleMatch={handleScheduleMatch}
+            players={players}
+          />
+        )}
+
+        {/* Scheduled Matches - only show when no current match */}
+        {!currentMatch && scheduledMatches.length > 0 && (
+          <ScheduledMatches
+            scheduledMatches={scheduledMatches}
+            players={players}
+            onStartMatch={handleStartScheduledMatch}
+            onDeleteMatch={handleDeleteScheduledMatch}
+          />
+        )}
+
         {/* Current Match or Match Setup */}
         {!currentMatch ? (
           <MatchSetup onStartNewMatch={handleStartNewMatch} players={players} />
@@ -228,6 +323,7 @@ const FootballTracker = () => {
           players={players}
           matches={matches.map((match) => ({
             ...match,
+            matchType: match.matchType as "league" | "cup",
             playerStats: match.playerStats.map((stat) => ({
               playerId: stat.playerId,
               playerName: stat.player?.name || "Unknown Player",
@@ -238,11 +334,6 @@ const FootballTracker = () => {
         />
 
         {/* Squad Management */}
-        <SquadManagement
-          players={players}
-          onAddPlayer={handleAddPlayer}
-          onRemovePlayer={handleRemovePlayer}
-        />
 
         {/* Players List */}
         {currentMatch && (

@@ -118,6 +118,10 @@ export function useMatches(userId: string) {
       date?: string;
       goalsFor?: number;
       goalsAgainst?: number;
+      matchType?: string;
+      notes?: string;
+      selectedPlayerIds?: string[];
+      isFinished?: boolean;
       playerStats?: Array<{
         playerId: string;
         goals?: number;

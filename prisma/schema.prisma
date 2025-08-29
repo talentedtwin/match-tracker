@@ -13,11 +13,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String?
+  gdprConsentDate     DateTime? // When user gave GDPR consent
+  consentWithdrawn    Boolean   @default(false) // If user withdrew consent
+  dataRetentionUntil  DateTime? // When to delete user data
+  lastLoginAt         DateTime? // For inactive user cleanup
+  isDeleted           Boolean   @default(false) // Soft deletion flag
+  deletedAt           DateTime? // When account was marked for deletion
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Relations
   players Player[]
@@ -28,9 +34,11 @@ model User {
 
 model Player {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @db.Text // Hex-encoded encrypted data (text-safe binary)
   goals     Int      @default(0)
   assists   Int      @default(0)
+  isDeleted Boolean  @default(false) // Soft deletion flag
+  deletedAt DateTime? // When player was marked for deletion
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -49,6 +57,9 @@ model Match {
   goalsFor     Int      @default(0)
   goalsAgainst Int      @default(0)
   isFinished   Boolean  @default(false)
+  matchType    String   @default("league") // "league" or "cup"
+  notes        String?  // Optional match notes
+  selectedPlayerIds String[] @default([]) // Array of player IDs selected for this match
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

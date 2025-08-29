@@ -35,8 +35,18 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { opponent, date, goalsFor, goalsAgainst, userId, playerStats } =
-      body;
+    const {
+      opponent,
+      date,
+      goalsFor,
+      goalsAgainst,
+      matchType,
+      notes,
+      selectedPlayerIds,
+      isFinished,
+      userId,
+      playerStats,
+    } = body;
 
     if (!opponent || !userId) {
       return NextResponse.json(
@@ -51,6 +61,10 @@ export async function POST(request: NextRequest) {
         date: date ? new Date(date) : new Date(),
         goalsFor: goalsFor || 0,
         goalsAgainst: goalsAgainst || 0,
+        matchType: matchType || "league",
+        notes: notes || null,
+        selectedPlayerIds: selectedPlayerIds || [],
+        isFinished: isFinished || false,
         userId,
         playerStats: playerStats
           ? {

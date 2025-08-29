@@ -7,8 +7,8 @@ import TeamScore from "../components/TeamScore";
 import StatsSummary from "../components/StatsSummary";
 import SquadManagement from "../components/SquadManagement";
 import PlayerStats from "../components/PlayerStats";
-import MatchHistory from "../components/MatchHistory";
-import { usePlayers, useMatches, useStats } from "../hooks/useApi";
+import { usePlayers, useMatches } from "../hooks/useApi";
+import { Player } from "../types";
 
 // Using the seeded user ID from the database
 const USER_ID = "test-user-id";
@@ -29,8 +29,6 @@ const FootballTracker = () => {
     error: matchesError,
     addMatch,
   } = useMatches(USER_ID);
-
-  const { stats, loading: statsLoading } = useStats(USER_ID);
 
   // Local state for current match (not stored in DB until finished)
   const [currentMatch, setCurrentMatch] = useState<{
@@ -112,11 +110,12 @@ const FootballTracker = () => {
   };
 
   // Handle starting a new match
-  const handleStartNewMatch = async (opponent: string) => {
-    if (players.length === 0) {
-      alert(
-        "Please add at least one player to your squad before starting a match"
-      );
+  const handleStartNewMatch = async (
+    opponent: string,
+    selectedPlayers: Player[]
+  ) => {
+    if (selectedPlayers.length === 0) {
+      alert("Please select at least one player for this match");
       return;
     }
 
@@ -127,7 +126,7 @@ const FootballTracker = () => {
       date: new Date().toISOString(),
       goalsFor: 0,
       goalsAgainst: 0,
-      playerStats: players.map((player) => ({
+      playerStats: selectedPlayers.map((player) => ({
         playerId: player.id,
         playerName: player.name,
         goals: 0,
@@ -193,7 +192,7 @@ const FootballTracker = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+    <div className="p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
@@ -255,21 +254,6 @@ const FootballTracker = () => {
               assists: stat.assists,
             }))}
             onUpdatePlayerStat={handleUpdatePlayerStat}
-          />
-        )}
-
-        {/* Match History */}
-        {matches.length > 0 && (
-          <MatchHistory
-            matches={matches.map((match) => ({
-              ...match,
-              playerStats: match.playerStats.map((stat) => ({
-                playerId: stat.playerId,
-                playerName: stat.player?.name || "Unknown Player",
-                goals: stat.goals,
-                assists: stat.assists,
-              })),
-            }))}
           />
         )}
       </div>

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const matchId = searchParams.get("matchId");
     const playerId = searchParams.get("playerId");
 
-    const where: any = {};
+    const where: { matchId?: string; playerId?: string } = {};
     if (matchId) where.matchId = matchId;
     if (playerId) where.playerId = playerId;
 

@@ -212,7 +212,7 @@ export function usePlayerMatchStats(matchId?: string, playerId?: string) {
         throw err;
       }
     },
-    [matchId, playerId]
+    []
   );
 
   const updateStat = useCallback(

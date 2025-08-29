@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Football Tracker",
+  title: "Match Tracker",
   description: "Track your grassroots football team's performance",
 };
 

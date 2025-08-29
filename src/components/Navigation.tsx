@@ -59,7 +59,7 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
               <Link href="/" className="flex items-center space-x-2">
                 <span className="text-2xl">⚽</span>
                 <span className="text-xl font-bold text-gray-800">
-                  Football Tracker
+                  Match Tracker
                 </span>
               </Link>
             </div>

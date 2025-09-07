@@ -29,6 +29,7 @@ const FootballTracker = () => {
     loading: matchesLoading,
     error: matchesError,
     addMatch,
+    removeMatch,
   } = useMatches(USER_ID);
 
   // Local state for current match (not stored in DB until finished)
@@ -220,8 +221,12 @@ const FootballTracker = () => {
 
   // Handle deleting a scheduled match
   const handleDeleteScheduledMatch = async (matchId: string) => {
-    // This will be implemented when we add the delete functionality to the API
-    console.log("Delete match:", matchId);
+    try {
+      await removeMatch(matchId);
+      console.log("Match deleted successfully:", matchId);
+    } catch (error) {
+      console.error("Failed to delete match:", error);
+    }
   };
 
   // Get scheduled matches (not yet started)

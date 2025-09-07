@@ -21,10 +21,18 @@ const StatsSummary: React.FC<StatsSummaryProps> = ({
     players.reduce((sum, player) => sum + player.assists, 0);
 
   const getOverallStats = () => {
-    const totalMatches = matches.length;
-    const wins = matches.filter((m) => m.goalsFor > m.goalsAgainst).length;
-    const draws = matches.filter((m) => m.goalsFor === m.goalsAgainst).length;
-    const losses = matches.filter((m) => m.goalsFor < m.goalsAgainst).length;
+    // Only include finished matches in statistics
+    const finishedMatches = matches.filter((match) => match.isFinished);
+    const totalMatches = finishedMatches.length;
+    const wins = finishedMatches.filter(
+      (m) => m.goalsFor > m.goalsAgainst
+    ).length;
+    const draws = finishedMatches.filter(
+      (m) => m.goalsFor === m.goalsAgainst
+    ).length;
+    const losses = finishedMatches.filter(
+      (m) => m.goalsFor < m.goalsAgainst
+    ).length;
 
     return { totalMatches, wins, draws, losses };
   };

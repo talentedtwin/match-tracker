@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PlayerService } from "@/lib/playerService";
 
-// GET /api/players - Get all players
-export async function GET() {
+// GET /api/players - Get all players with decrypted names
+export async function GET(request: NextRequest) {
   try {
-    const players = await prisma.player.findMany({
-      orderBy: { name: "asc" },
-    });
+    const userId = request.nextUrl.searchParams.get("userId");
 
+    if (!userId) {
+      return NextResponse.json(
+        { error: "userId parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const players = await PlayerService.getPlayersForUser(userId);
     return NextResponse.json(players);
   } catch (error) {
     console.error("Error fetching players:", error);
@@ -18,7 +24,7 @@ export async function GET() {
   }
 }
 
-// POST /api/players - Create a new player
+// POST /api/players - Create a new player with encrypted name
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -31,13 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const player = await prisma.player.create({
-      data: {
-        name,
-        userId,
-      },
-    });
-
+    const player = await PlayerService.createPlayer(userId, name);
     return NextResponse.json(player, { status: 201 });
   } catch (error) {
     console.error("Error creating player:", error);

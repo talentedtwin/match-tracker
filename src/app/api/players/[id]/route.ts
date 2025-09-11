@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PlayerService } from "@/lib/playerService";
 
-// GET /api/players/[id] - Get a specific player
+// GET /api/players/[id] - Get a specific player with decrypted name
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const player = await prisma.player.findUnique({
-      where: { id },
-      include: {
-        matchStats: {
-          include: {
-            match: true,
-          },
-        },
-      },
-    });
+    const player = await PlayerService.getPlayer(id);
 
     if (!player) {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });
@@ -33,7 +24,7 @@ export async function GET(
   }
 }
 
-// PUT /api/players/[id] - Update a player
+// PUT /api/players/[id] - Update a player with encryption
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -43,15 +34,16 @@ export async function PUT(
     const body = await request.json();
     const { name, goals, assists } = body;
 
-    const player = await prisma.player.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(goals !== undefined && { goals }),
-        ...(assists !== undefined && { assists }),
-      },
-    });
+    const updateData: Partial<{
+      name: string;
+      goals: number;
+      assists: number;
+    }> = {};
+    if (name !== undefined) updateData.name = name;
+    if (goals !== undefined) updateData.goals = goals;
+    if (assists !== undefined) updateData.assists = assists;
 
+    const player = await PlayerService.updatePlayer(id, updateData);
     return NextResponse.json(player);
   } catch (error) {
     console.error("Error updating player:", error);
@@ -70,16 +62,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/players/[id] - Delete a player
+// DELETE /api/players/[id] - Delete a player (soft delete)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    await prisma.player.delete({
-      where: { id },
-    });
+    await PlayerService.deletePlayer(id);
 
     return NextResponse.json({ message: "Player deleted successfully" });
   } catch (error) {

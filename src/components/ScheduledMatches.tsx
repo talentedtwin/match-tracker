@@ -1,14 +1,24 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { ScheduledMatch, Player } from "../types";
-import { Calendar, Users, Trophy, Play, FileText, Clock } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  Trophy,
+  Play,
+  FileText,
+  Clock,
+  Edit,
+} from "lucide-react";
+import EditMatchModal from "./EditMatchModal";
 
 interface ScheduledMatchesProps {
   scheduledMatches: ScheduledMatch[];
   players: Player[];
   onStartMatch: (match: ScheduledMatch) => void;
   onDeleteMatch?: (matchId: string) => void;
+  onEditMatch?: (match: ScheduledMatch) => void;
 }
 
 const ScheduledMatches: React.FC<ScheduledMatchesProps> = ({
@@ -16,7 +26,48 @@ const ScheduledMatches: React.FC<ScheduledMatchesProps> = ({
   players,
   onStartMatch,
   onDeleteMatch,
+  onEditMatch,
 }) => {
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<ScheduledMatch | null>(
+    null
+  );
+
+  const handleEditClick = (match: ScheduledMatch) => {
+    setSelectedMatch(match);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSave = async (updatedMatch: Partial<ScheduledMatch>) => {
+    try {
+      // Convert the partial match to a full ScheduledMatch for the parent handler
+      if (selectedMatch && updatedMatch.id) {
+        const fullUpdatedMatch: ScheduledMatch = {
+          ...selectedMatch,
+          ...updatedMatch,
+          id: updatedMatch.id,
+          opponent: updatedMatch.opponent || selectedMatch.opponent,
+          date: updatedMatch.date || selectedMatch.date,
+          matchType: updatedMatch.matchType || selectedMatch.matchType,
+          notes:
+            updatedMatch.notes !== undefined
+              ? updatedMatch.notes
+              : selectedMatch.notes,
+          selectedPlayerIds:
+            updatedMatch.selectedPlayerIds || selectedMatch.selectedPlayerIds,
+          isFinished: selectedMatch.isFinished,
+        };
+
+        // Let the parent component handle the API call and state update
+        await onEditMatch?.(fullUpdatedMatch);
+        setEditModalOpen(false);
+        setSelectedMatch(null);
+      }
+    } catch (error) {
+      console.error("Error updating match:", error);
+    }
+  };
+
   const getSelectedPlayerNames = (selectedPlayerIds: string[]) => {
     return players
       .filter((player) => selectedPlayerIds.includes(player.id))
@@ -195,6 +246,16 @@ const ScheduledMatches: React.FC<ScheduledMatchesProps> = ({
                     Start Match
                   </button>
 
+                  {onEditMatch && (
+                    <button
+                      onClick={() => handleEditClick(match)}
+                      className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  )}
+
                   {onDeleteMatch && (
                     <button
                       onClick={() => onDeleteMatch(match.id)}
@@ -209,6 +270,17 @@ const ScheduledMatches: React.FC<ScheduledMatchesProps> = ({
           );
         })}
       </div>
+
+      <EditMatchModal
+        match={selectedMatch}
+        players={players}
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedMatch(null);
+        }}
+        onSave={handleEditSave}
+      />
     </div>
   );
 };

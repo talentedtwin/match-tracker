@@ -198,14 +198,61 @@ export class PlayerService {
   }
 
   /**
-   * Decrypt a player name safely
+   * Check if a name appears to be encrypted
    */
-  private static decryptPlayerName(encryptedName: string): string {
+  private static isEncrypted(nameData: string): boolean {
+    return nameData.includes(":") && nameData.length > 32;
+  }
+
+  /**
+   * Safely encrypt a player name if it's not already encrypted
+   */
+  static async encryptPlayerNameIfNeeded(
+    playerId: string,
+    currentName: string
+  ): Promise<void> {
+    if (!this.isEncrypted(currentName)) {
+      console.log(`Encrypting player ${playerId}: "${currentName}"`);
+      const encryptedName = EncryptionService.encrypt(currentName);
+
+      await prisma.player.update({
+        where: { id: playerId },
+        data: { name: encryptedName },
+      });
+
+      console.log(`✓ Encrypted player ${playerId}`);
+    }
+  }
+
+  /**
+   * Decrypt a player name safely, handling both encrypted and plaintext data
+   */
+  private static decryptPlayerName(nameData: string): string {
     try {
-      return EncryptionService.decrypt(encryptedName);
+      // Check if data looks like encrypted format (contains colon separator)
+      if (!nameData.includes(":")) {
+        // Probably plaintext, return as-is but log for migration
+        console.warn(
+          `Player name appears to be plaintext: "${nameData}". Consider running migration.`
+        );
+        return nameData;
+      }
+
+      // Try to decrypt
+      return EncryptionService.decrypt(nameData);
     } catch (error) {
       console.error("Failed to decrypt player name:", error);
-      return "Unknown Player"; // Fallback for corrupted data
+
+      // If decryption fails but data contains ':', it might be corrupted encrypted data
+      if (nameData.includes(":")) {
+        console.error(
+          `Corrupted encrypted data detected: ${nameData.substring(0, 20)}...`
+        );
+        return "[Encrypted Name - Corrupted]";
+      }
+
+      // Otherwise, treat as plaintext
+      return nameData;
     }
   }
 

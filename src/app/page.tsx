@@ -29,6 +29,7 @@ const FootballTracker = () => {
     loading: matchesLoading,
     error: matchesError,
     addMatch,
+    updateMatch,
     removeMatch,
   } = useMatches(USER_ID);
 
@@ -229,6 +230,23 @@ const FootballTracker = () => {
     }
   };
 
+  // Handle editing a scheduled match
+  const handleEditScheduledMatch = async (updatedMatch: ScheduledMatch) => {
+    try {
+      // Use the updateMatch function from the hook to update local state
+      await updateMatch(updatedMatch.id, {
+        opponent: updatedMatch.opponent,
+        date: updatedMatch.date,
+        matchType: updatedMatch.matchType,
+        notes: updatedMatch.notes,
+        selectedPlayerIds: updatedMatch.selectedPlayerIds,
+      });
+      console.log("Match updated successfully:", updatedMatch);
+    } catch (error) {
+      console.error("Failed to update match:", error);
+    }
+  };
+
   // Get scheduled matches (not yet started)
   const scheduledMatches: ScheduledMatch[] = useMemo(() => {
     return matches
@@ -300,6 +318,7 @@ const FootballTracker = () => {
             players={players}
             onStartMatch={handleStartScheduledMatch}
             onDeleteMatch={handleDeleteScheduledMatch}
+            onEditMatch={handleEditScheduledMatch}
           />
         )}
 

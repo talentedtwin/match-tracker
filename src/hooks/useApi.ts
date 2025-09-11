@@ -19,12 +19,8 @@ export function usePlayers(userId: string) {
     try {
       setLoading(true);
       setError(null);
-      const data = await playerApi.getAll();
-      // Filter players by userId if needed
-      const userPlayers = data.filter(
-        (player: ApiPlayer) => player.userId === userId
-      );
-      setPlayers(userPlayers);
+      const data = await playerApi.getAll(userId);
+      setPlayers(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch players");
     } finally {

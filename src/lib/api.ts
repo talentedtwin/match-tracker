@@ -47,8 +47,10 @@ export interface ApiUser {
 
 // Player API functions
 export const playerApi = {
-  async getAll(): Promise<ApiPlayer[]> {
-    const response = await fetch(`${API_BASE}/players`);
+  async getAll(userId: string): Promise<ApiPlayer[]> {
+    const response = await fetch(
+      `${API_BASE}/players?userId=${encodeURIComponent(userId)}`
+    );
     if (!response.ok) throw new Error("Failed to fetch players");
     return response.json();
   },

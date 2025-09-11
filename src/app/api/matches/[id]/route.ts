@@ -47,8 +47,17 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { opponent, date, goalsFor, goalsAgainst, isFinished, playerStats } =
-      body;
+    const {
+      opponent,
+      date,
+      goalsFor,
+      goalsAgainst,
+      isFinished,
+      matchType,
+      notes,
+      selectedPlayerIds,
+      playerStats,
+    } = body;
 
     const match = await prisma.match.update({
       where: { id },
@@ -58,6 +67,9 @@ export async function PUT(
         ...(goalsFor !== undefined && { goalsFor }),
         ...(goalsAgainst !== undefined && { goalsAgainst }),
         ...(isFinished !== undefined && { isFinished }),
+        ...(matchType && { matchType }),
+        ...(notes !== undefined && { notes }),
+        ...(selectedPlayerIds && { selectedPlayerIds }),
         ...(playerStats && {
           playerStats: {
             deleteMany: {},

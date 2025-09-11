@@ -26,11 +26,20 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Filter to only include finished matches
+    const finishedMatches = matches.filter((m) => m.isFinished);
+
     // Calculate statistics
-    const totalMatches = matches.length;
-    const wins = matches.filter((m) => m.goalsFor > m.goalsAgainst).length;
-    const draws = matches.filter((m) => m.goalsFor === m.goalsAgainst).length;
-    const losses = matches.filter((m) => m.goalsFor < m.goalsAgainst).length;
+    const totalMatches = finishedMatches.length;
+    const wins = finishedMatches.filter(
+      (m) => m.goalsFor > m.goalsAgainst
+    ).length;
+    const draws = finishedMatches.filter(
+      (m) => m.goalsFor === m.goalsAgainst
+    ).length;
+    const losses = finishedMatches.filter(
+      (m) => m.goalsFor < m.goalsAgainst
+    ).length;
 
     // Get all players for the user
     const players = await prisma.player.findMany({
@@ -40,8 +49,17 @@ export async function GET(request: NextRequest) {
     // Calculate player statistics
     const playerStats = await Promise.all(
       players.map(async (player) => {
+        // Get player match stats for goals/assists
         const playerMatchStats = await prisma.playerMatchStat.findMany({
-          where: { playerId: player.id },
+          where: {
+            playerId: player.id,
+            match: {
+              isFinished: true, // Only include stats from finished matches
+            },
+          },
+          include: {
+            match: true,
+          },
         });
 
         const totalGoals = playerMatchStats.reduce(
@@ -52,7 +70,11 @@ export async function GET(request: NextRequest) {
           (sum, stat) => sum + stat.assists,
           0
         );
-        const matchesPlayed = playerMatchStats.length;
+
+        // Count matches played by checking finished matches where player was in selectedPlayerIds
+        const matchesPlayed = finishedMatches.filter((match) =>
+          match.selectedPlayerIds.includes(player.id)
+        ).length;
 
         return {
           playerId: player.id,

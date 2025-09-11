@@ -3,6 +3,7 @@
 import React from "react";
 import { usePlayers } from "../../hooks/useApi";
 import SquadManagement from "../../components/SquadManagement";
+import { PlayerManagementSkeleton } from "../../components/Skeleton";
 import { User, Trophy, Target, Calendar } from "lucide-react";
 
 // Using the seeded user ID from the database
@@ -19,16 +20,7 @@ const PlayersPage = () => {
 
   // Show loading state
   if (playersLoading) {
-    return (
-      <div className="p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading players...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <PlayerManagementSkeleton />;
   }
 
   // Show error state

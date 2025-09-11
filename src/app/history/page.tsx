@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useMatches } from "../../hooks/useApi";
 import MatchHistory from "../../components/MatchHistory";
+import { MatchHistorySkeleton } from "../../components/Skeleton";
 
 // Using the seeded user ID from the database
 const USER_ID = "test-user-id";
@@ -18,13 +19,8 @@ const HistoryPage = () => {
   // Show loading state
   if (matchesLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading match history...</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <MatchHistorySkeleton />
       </div>
     );
   }

@@ -8,6 +8,7 @@ import CurrentMatchHeader from "../components/CurrentMatchHeader";
 import TeamScore from "../components/TeamScore";
 import StatsSummary from "../components/StatsSummary";
 import PlayerStats from "../components/PlayerStats";
+import { DashboardSkeleton } from "../components/Skeleton";
 import { usePlayers, useMatches } from "../hooks/useApi";
 import { Player, ScheduledMatch } from "../types";
 
@@ -266,13 +267,8 @@ const FootballTracker = () => {
   // Show loading state
   if (playersLoading || matchesLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <DashboardSkeleton />
       </div>
     );
   }

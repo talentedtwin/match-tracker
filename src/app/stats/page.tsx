@@ -3,6 +3,7 @@
 import React from "react";
 import { usePlayers } from "../../hooks/useApi";
 import { useMatches } from "../../hooks/useApi";
+import { StatsPageSkeleton } from "../../components/Skeleton";
 import { TrendingUp, Users, Target, Award, BarChart3 } from "lucide-react";
 
 // Using the seeded user ID from the database
@@ -40,14 +41,32 @@ const StatsPage: React.FC = () => {
       };
     }
 
-    const totalMatches = matches.length;
+    // Filter to only include finished matches
+    const finishedMatches = matches.filter((match) => match.isFinished);
+    const totalMatches = finishedMatches.length;
+
+    if (totalMatches === 0) {
+      return {
+        totalMatches: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        winPercentage: 0,
+        avgGoalsFor: 0,
+        avgGoalsAgainst: 0,
+      };
+    }
+
     let wins = 0;
     let draws = 0;
     let losses = 0;
     let goalsFor = 0;
     let goalsAgainst = 0;
 
-    matches.forEach((match) => {
+    finishedMatches.forEach((match) => {
       goalsFor += match.goalsFor;
       goalsAgainst += match.goalsAgainst;
 
@@ -85,20 +104,31 @@ const StatsPage: React.FC = () => {
       return [];
     }
 
+    // Filter to only include finished matches
+    const finishedMatches = matches.filter((match) => match.isFinished);
+
     return players
       .map((player) => {
         let totalGoals = 0;
         let totalAssists = 0;
         let matchesPlayed = 0;
 
-        matches.forEach((match) => {
-          const playerStat = match.playerStats?.find(
-            (stat) => stat.playerId === player.id
-          );
-          if (playerStat) {
-            totalGoals += playerStat.goals || 0;
-            totalAssists += playerStat.assists || 0;
+        finishedMatches.forEach((match) => {
+          // Check if player was in the squad for this match
+          if (
+            match.selectedPlayerIds &&
+            match.selectedPlayerIds.includes(player.id)
+          ) {
             matchesPlayed++;
+
+            // Add goals and assists if the player has stats for this match
+            const playerStat = match.playerStats?.find(
+              (stat) => stat.playerId === player.id
+            );
+            if (playerStat) {
+              totalGoals += playerStat.goals || 0;
+              totalAssists += playerStat.assists || 0;
+            }
           }
         });
 
@@ -116,20 +146,7 @@ const StatsPage: React.FC = () => {
   }, [players, matches]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-300 rounded-xl"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <StatsPageSkeleton />;
   }
 
   if (error) {

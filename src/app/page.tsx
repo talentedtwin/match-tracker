@@ -32,6 +32,7 @@ const FootballTracker = () => {
     addMatch,
     updateMatch,
     removeMatch,
+    refetch: refetchMatches,
   } = useMatches(USER_ID);
 
   // Local state for current match (not stored in DB until finished)
@@ -153,19 +154,29 @@ const FootballTracker = () => {
     if (!currentMatch) return;
 
     try {
-      const finalMatch = {
-        ...currentMatch,
-        goalsFor: teamScore.for,
-        goalsAgainst: teamScore.against,
-        isFinished: true,
-        playerStats: currentMatch.playerStats.map((stat) => ({
-          playerId: stat.playerId,
-          goals: stat.goals,
-          assists: stat.assists,
-        })),
-      };
+      // Make direct API call to update the match with all data including playerStats
+      const response = await fetch(`/api/matches/${currentMatch.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goalsFor: teamScore.for,
+          goalsAgainst: teamScore.against,
+          isFinished: true,
+          playerStats: currentMatch.playerStats.map((stat) => ({
+            playerId: stat.playerId,
+            goals: stat.goals,
+            assists: stat.assists,
+          })),
+        }),
+      });
 
-      await addMatch(finalMatch);
+      if (!response.ok) {
+        throw new Error("Failed to finish match");
+      }
+
+      // Trigger a refetch of matches to update the UI
+      await refetchMatches();
+
       setCurrentMatch(null);
       setTeamScore({ for: 0, against: 0 });
     } catch (error) {
@@ -199,11 +210,11 @@ const FootballTracker = () => {
       scheduledMatch.selectedPlayerIds.includes(player.id)
     );
 
-    const matchId = `match-${Date.now()}`;
-    const newMatch = {
-      id: matchId,
+    // Use the existing scheduled match but mark it as started
+    const startedMatch = {
+      id: scheduledMatch.id, // Keep the same ID
       opponent: scheduledMatch.opponent,
-      date: new Date().toISOString(),
+      date: new Date().toISOString(), // Update to current time when match actually starts
       goalsFor: 0,
       goalsAgainst: 0,
       isFinished: false,
@@ -217,7 +228,7 @@ const FootballTracker = () => {
       })),
     };
 
-    setCurrentMatch(newMatch);
+    setCurrentMatch(startedMatch);
     setTeamScore({ for: 0, against: 0 });
   };
 

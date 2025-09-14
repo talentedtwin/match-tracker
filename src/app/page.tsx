@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import MatchSetup from "../components/MatchSetup";
 import MatchScheduler from "../components/MatchScheduler";
 import ScheduledMatches from "../components/ScheduledMatches";
@@ -8,8 +8,10 @@ import CurrentMatchHeader from "../components/CurrentMatchHeader";
 import TeamScore from "../components/TeamScore";
 import StatsSummary from "../components/StatsSummary";
 import PlayerStats from "../components/PlayerStats";
+import OfflineStatus from "../components/OfflineStatus";
 import { DashboardSkeleton } from "../components/Skeleton";
 import { usePlayers, useMatches } from "../hooks/useApi";
+import { useOffline } from "../hooks/useOffline";
 import { Player, ScheduledMatch } from "../types";
 
 // Using the seeded user ID from the database
@@ -35,6 +37,19 @@ const FootballTracker = () => {
     refetch: refetchMatches,
   } = useMatches(USER_ID);
 
+  // Offline functionality
+  const {
+    isOnline,
+    isSyncing,
+    syncStatus,
+    pendingCount,
+    lastSync,
+    syncNow,
+    saveOfflineState,
+    loadOfflineState,
+    addPendingMatch,
+  } = useOffline();
+
   // Local state for current match (not stored in DB until finished)
   const [currentMatch, setCurrentMatch] = useState<{
     id: string;
@@ -55,6 +70,36 @@ const FootballTracker = () => {
 
   const [teamScore, setTeamScore] = useState({ for: 0, against: 0 });
 
+  // Load offline state on mount
+  useEffect(() => {
+    const offlineState = loadOfflineState();
+    if (offlineState && offlineState.currentMatch) {
+      setCurrentMatch(offlineState.currentMatch);
+      setTeamScore(offlineState.teamScore);
+    }
+  }, [loadOfflineState]);
+
+  // Save offline state whenever current match or score changes
+  useEffect(() => {
+    if (currentMatch) {
+      saveOfflineState({
+        currentMatch: {
+          id: currentMatch.id,
+          opponent: currentMatch.opponent,
+          date: currentMatch.date,
+          goalsFor: teamScore.for,
+          goalsAgainst: teamScore.against,
+          isFinished: currentMatch.isFinished,
+          matchType: currentMatch.matchType,
+          selectedPlayerIds: currentMatch.selectedPlayerIds,
+          playerStats: currentMatch.playerStats,
+        },
+        teamScore: teamScore,
+        lastSaved: Date.now(),
+      });
+    }
+  }, [currentMatch, teamScore, saveOfflineState]);
+
   // Handle adding a new player
   const handleAddPlayer = async (name: string) => {
     try {
@@ -73,49 +118,49 @@ const FootballTracker = () => {
     }
   };
 
-  // Handle updating player stats during a match
-  const handleUpdatePlayerStat = async (
-    playerId: string,
-    stat: "goals" | "assists",
-    increment: number
-  ) => {
-    if (!currentMatch) return;
+  // Handle updating player stats during a match - memoized to prevent re-renders
+  const handleUpdatePlayerStat = useCallback(
+    async (playerId: string, stat: "goals" | "assists", increment: number) => {
+      if (!currentMatch) return;
 
-    // Update local current match state
-    setCurrentMatch((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        playerStats: prev.playerStats.map((playerStat) =>
-          playerStat.playerId === playerId
-            ? {
-                ...playerStat,
-                [stat]: Math.max(0, playerStat[stat] + increment),
-              }
-            : playerStat
-        ),
-      };
-    });
+      // Update local current match state
+      setCurrentMatch((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          playerStats: prev.playerStats.map((playerStat) =>
+            playerStat.playerId === playerId
+              ? {
+                  ...playerStat,
+                  [stat]: Math.max(0, playerStat[stat] + increment),
+                }
+              : playerStat
+          ),
+        };
+      });
 
-    // Automatically update team score when goals are added/removed
-    if (stat === "goals") {
-      setTeamScore((prev) => ({
-        ...prev,
-        for: Math.max(0, prev.for + increment),
-      }));
-    }
-  };
+      // Automatically update team score when goals are added/removed
+      if (stat === "goals") {
+        setTeamScore((prev) => ({
+          ...prev,
+          for: Math.max(0, prev.for + increment),
+        }));
+      }
+    },
+    [currentMatch]
+  );
 
   // Handle updating team score
-  const handleUpdateTeamScore = (
-    type: "for" | "against",
-    increment: number
-  ) => {
-    setTeamScore((prev) => ({
-      ...prev,
-      [type]: Math.max(0, prev[type] + increment),
-    }));
-  };
+  // Handle team score updates - memoized to prevent re-renders
+  const handleUpdateTeamScore = useCallback(
+    (type: "for" | "against", increment: number) => {
+      setTeamScore((prev) => ({
+        ...prev,
+        [type]: Math.max(0, prev[type] + increment),
+      }));
+    },
+    []
+  );
 
   // Handle starting a new match
   const handleStartNewMatch = async (
@@ -153,12 +198,22 @@ const FootballTracker = () => {
   const handleFinishMatch = async () => {
     if (!currentMatch) return;
 
+    const matchData = {
+      goalsFor: teamScore.for,
+      goalsAgainst: teamScore.against,
+      isFinished: true,
+      playerStats: currentMatch.playerStats.map((stat) => ({
+        playerId: stat.playerId,
+        goals: stat.goals,
+        assists: stat.assists,
+      })),
+    };
+
     try {
-      // Make direct API call to update the match with all data including playerStats
-      const response = await fetch(`/api/matches/${currentMatch.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (!isOnline) {
+        // Save match completion for later sync - pass only the essential data
+        addPendingMatch("update", {
+          id: currentMatch.id,
           goalsFor: teamScore.for,
           goalsAgainst: teamScore.against,
           isFinished: true,
@@ -167,7 +222,19 @@ const FootballTracker = () => {
             goals: stat.goals,
             assists: stat.assists,
           })),
-        }),
+        });
+
+        // Clear local state immediately to show match is "finished"
+        setCurrentMatch(null);
+        setTeamScore({ for: 0, against: 0 });
+        return;
+      }
+
+      // Make direct API call to update the match with all data including playerStats
+      const response = await fetch(`/api/matches/${currentMatch.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(matchData),
       });
 
       if (!response.ok) {
@@ -181,6 +248,25 @@ const FootballTracker = () => {
       setTeamScore({ for: 0, against: 0 });
     } catch (error) {
       console.error("Failed to finish match:", error);
+
+      // If online but API failed, save for later sync
+      if (isOnline) {
+        addPendingMatch("update", {
+          id: currentMatch.id,
+          goalsFor: teamScore.for,
+          goalsAgainst: teamScore.against,
+          isFinished: true,
+          playerStats: currentMatch.playerStats.map((stat) => ({
+            playerId: stat.playerId,
+            goals: stat.goals,
+            assists: stat.assists,
+          })),
+        });
+
+        // Still clear local state to show match is "finished"
+        setCurrentMatch(null);
+        setTeamScore({ for: 0, against: 0 });
+      }
     }
   };
 
@@ -309,6 +395,16 @@ const FootballTracker = () => {
             Track your team&apos;s performance
           </p>
         </div>
+
+        {/* Offline Status */}
+        <OfflineStatus
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          syncStatus={syncStatus}
+          pendingCount={pendingCount}
+          lastSync={lastSync}
+          onSyncNow={syncNow}
+        />
 
         {/* Match Scheduler - only show when no current match */}
         {!currentMatch && (

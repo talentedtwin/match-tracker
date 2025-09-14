@@ -12,6 +12,7 @@ import {
   Edit,
 } from "lucide-react";
 import EditMatchModal from "./EditMatchModal";
+import { formatDate, formatTime } from "../utils/dateUtils";
 
 interface ScheduledMatchesProps {
   scheduledMatches: ScheduledMatch[];
@@ -72,24 +73,6 @@ const ScheduledMatches: React.FC<ScheduledMatchesProps> = ({
     return players
       .filter((player) => selectedPlayerIds.includes(player.id))
       .map((player) => player.name);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const isMatchToday = (dateString: string) => {

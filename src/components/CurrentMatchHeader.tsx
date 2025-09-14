@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Match } from "../types";
+import { formatDateTime } from "../utils/dateUtils";
 
 interface CurrentMatchHeaderProps {
   currentMatch: Match;
@@ -26,7 +27,7 @@ const CurrentMatchHeader: React.FC<CurrentMatchHeaderProps> = ({
         </button>
       </div>
       <p className="text-sm text-gray-600 mb-4">
-        Match Date: {currentMatch.date}
+        Match Date: {formatDateTime(currentMatch.date)}
       </p>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Match } from "../types";
+import { formatDateTime } from "../utils/dateUtils";
 
 interface MatchHistoryProps {
   matches: Match[];
@@ -35,7 +36,9 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
                   <h3 className="font-medium text-gray-800">
                     vs {match.opponent}
                   </h3>
-                  <p className="text-sm text-gray-600">{match.date}</p>
+                  <p className="text-sm text-gray-600">
+                    {formatDateTime(match.date)}
+                  </p>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold">

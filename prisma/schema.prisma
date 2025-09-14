@@ -13,7 +13,7 @@ datasource db {
 }
 
 model User {
-  id                  String    @id @default(cuid())
+  id                  String    @id // Clerk user ID (no @default since it comes from Clerk)
   email               String    @unique
   name                String?
   gdprConsentDate     DateTime? // When user gave GDPR consent

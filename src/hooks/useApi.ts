@@ -10,7 +10,7 @@ import {
 } from "../lib/api";
 
 // Hook for managing players
-export function usePlayers(userId: string) {
+export function usePlayers() {
   const [players, setPlayers] = useState<ApiPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,19 +19,19 @@ export function usePlayers(userId: string) {
     try {
       setLoading(true);
       setError(null);
-      const data = await playerApi.getAll(userId);
+      const data = await playerApi.getAll();
       setPlayers(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch players");
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []); // Remove userId dependency since auth is handled server-side
 
   const addPlayer = useCallback(
     async (name: string) => {
       try {
-        const newPlayer = await playerApi.create(name, userId);
+        const newPlayer = await playerApi.create(name);
         setPlayers((prev) => [...prev, newPlayer]);
         return newPlayer;
       } catch (err) {
@@ -39,7 +39,7 @@ export function usePlayers(userId: string) {
         throw err;
       }
     },
-    [userId]
+    [] // Remove userId dependency since auth is handled server-side
   );
 
   const updatePlayer = useCallback(
@@ -86,7 +86,7 @@ export function usePlayers(userId: string) {
 }
 
 // Hook for managing matches
-export function useMatches(userId: string) {
+export function useMatches() {
   const [matches, setMatches] = useState<ApiMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,17 +96,13 @@ export function useMatches(userId: string) {
       setLoading(true);
       setError(null);
       const data = await matchApi.getAll();
-      // Filter matches by userId if needed
-      const userMatches = data.filter(
-        (match: ApiMatch) => match.userId === userId
-      );
-      setMatches(userMatches);
+      setMatches(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch matches");
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   const addMatch = useCallback(
     async (matchData: {
@@ -125,7 +121,7 @@ export function useMatches(userId: string) {
       }>;
     }) => {
       try {
-        const newMatch = await matchApi.create({ ...matchData, userId });
+        const newMatch = await matchApi.create(matchData);
         setMatches((prev) => [newMatch, ...prev]);
         return newMatch;
       } catch (err) {
@@ -133,7 +129,7 @@ export function useMatches(userId: string) {
         throw err;
       }
     },
-    [userId]
+    []
   );
 
   const updateMatch = useCallback(

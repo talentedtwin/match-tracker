@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { withDatabaseUserContext } from "@/lib/db-utils";
 
 interface PlayerStatInput {
   playerId: string;
@@ -7,18 +9,31 @@ interface PlayerStatInput {
   assists?: number;
 }
 
-// GET /api/matches - Get all matches
+// GET /api/matches - Get all matches for the authenticated user
 export async function GET() {
   try {
-    const matches = await prisma.match.findMany({
-      include: {
-        playerStats: {
-          include: {
-            player: true,
+    // Get the authenticated user from Clerk
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    // Use RLS context to ensure users only see their own data
+    const matches = await withDatabaseUserContext(userId, async () => {
+      return await prisma.match.findMany({
+        include: {
+          playerStats: {
+            include: {
+              player: true,
+            },
           },
         },
-      },
-      orderBy: { date: "desc" },
+        orderBy: { date: "desc" },
+      });
     });
 
     return NextResponse.json(matches);
@@ -31,9 +46,19 @@ export async function GET() {
   }
 }
 
-// POST /api/matches - Create a new match
+// POST /api/matches - Create a new match for the authenticated user
 export async function POST(request: NextRequest) {
   try {
+    // Get the authenticated user from Clerk
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       opponent,
@@ -44,48 +69,49 @@ export async function POST(request: NextRequest) {
       notes,
       selectedPlayerIds,
       isFinished,
-      userId,
       playerStats,
     } = body;
 
-    if (!opponent || !userId) {
-      return NextResponse.json(
-        { error: "Opponent and userId are required" },
-        { status: 400 }
-      );
-    }
+    // Use RLS context for database operations
+    const newMatch = await withDatabaseUserContext(userId, async () => {
+      if (!opponent) {
+        throw new Error("Opponent is required");
+      }
 
-    const match = await prisma.match.create({
-      data: {
-        opponent,
-        date: date ? new Date(date) : new Date(),
-        goalsFor: goalsFor || 0,
-        goalsAgainst: goalsAgainst || 0,
-        matchType: matchType || "league",
-        notes: notes || null,
-        selectedPlayerIds: selectedPlayerIds || [],
-        isFinished: isFinished || false,
-        userId,
-        playerStats: playerStats
-          ? {
-              create: playerStats.map((stat: PlayerStatInput) => ({
-                playerId: stat.playerId,
-                goals: stat.goals || 0,
-                assists: stat.assists || 0,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        playerStats: {
-          include: {
-            player: true,
+      const match = await prisma.match.create({
+        data: {
+          opponent,
+          date: date ? new Date(date) : new Date(),
+          goalsFor: goalsFor || 0,
+          goalsAgainst: goalsAgainst || 0,
+          matchType: matchType || "league",
+          notes: notes || null,
+          selectedPlayerIds: selectedPlayerIds || [],
+          isFinished: isFinished || false,
+          userId,
+          playerStats: playerStats
+            ? {
+                create: playerStats.map((stat: PlayerStatInput) => ({
+                  playerId: stat.playerId,
+                  goals: stat.goals || 0,
+                  assists: stat.assists || 0,
+                })),
+              }
+            : undefined,
+        },
+        include: {
+          playerStats: {
+            include: {
+              player: true,
+            },
           },
         },
-      },
+      });
+
+      return match;
     });
 
-    return NextResponse.json(match, { status: 201 });
+    return NextResponse.json(newMatch, { status: 201 });
   } catch (error) {
     console.error("Error creating match:", error);
     return NextResponse.json(

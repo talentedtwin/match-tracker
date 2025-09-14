@@ -1,27 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
-import GDPRService from "@/lib/gdpr";
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { UserService } from "@/lib/userService";
 
 // GET /api/gdpr/export - Export user data (Article 15: Right of Access)
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const userId = request.nextUrl.searchParams.get("userId");
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
       );
     }
 
-    const userData = await GDPRService.exportUserData(userId);
+    // Check if user has valid consent
+    const consentStatus = await UserService.checkGDPRConsent(userId);
+    if (!consentStatus.hasConsent) {
+      return NextResponse.json(
+        { error: `Cannot export data: ${consentStatus.reason}` },
+        { status: 403 }
+      );
+    }
+
+    // Export all user data
+    const userData = await UserService.exportUserData(userId);
 
     // Set headers for file download
+    const filename = `user-data-export-${userId}-${
+      new Date().toISOString().split("T")[0]
+    }.json`;
     const headers = new Headers();
     headers.set("Content-Type", "application/json");
-    headers.set(
-      "Content-Disposition",
-      `attachment; filename="user-data-${userId}.json"`
-    );
+    headers.set("Content-Disposition", `attachment; filename="${filename}"`);
 
     return new NextResponse(JSON.stringify(userData, null, 2), {
       status: 200,
@@ -37,21 +48,26 @@ export async function GET(request: NextRequest) {
 }
 
 // DELETE /api/gdpr/export - Delete user account (Article 17: Right to Erasure)
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   try {
-    const { userId } = await request.json();
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
       );
     }
 
-    await GDPRService.deleteUserAccount(userId);
+    // Withdraw consent and mark for deletion
+    await UserService.withdrawConsent(userId);
 
     return NextResponse.json(
-      { message: "User account marked for deletion" },
+      {
+        message: "Account marked for deletion",
+        notice:
+          "Your data will be permanently deleted within 30 days as per GDPR requirements",
+      },
       { status: 200 }
     );
   } catch (error) {

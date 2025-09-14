@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { PlayerService } from "@/lib/playerService";
+import { withDatabaseUserContext } from "@/lib/db-utils";
 
-// GET /api/players - Get all players with decrypted names
-export async function GET(request: NextRequest) {
+// GET /api/players - Get all players for the authenticated user
+export async function GET() {
   try {
-    const userId = request.nextUrl.searchParams.get("userId");
+    // Get the authenticated user from Clerk
+    const { userId } = await auth();
 
     if (!userId) {
       return NextResponse.json(
-        { error: "userId parameter is required" },
-        { status: 400 }
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
       );
     }
 
-    const players = await PlayerService.getPlayersForUser(userId);
+    // Use RLS context to ensure users only see their own data
+    const players = await withDatabaseUserContext(userId, async () => {
+      return await PlayerService.getPlayersForUser(userId);
+    });
+
     return NextResponse.json(players);
   } catch (error) {
     console.error("Error fetching players:", error);
@@ -24,20 +31,34 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/players - Create a new player with encrypted name
+// POST /api/players - Create a new player for the authenticated user
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, userId } = body;
+    // Get the authenticated user from Clerk
+    const { userId: authUserId } = await auth();
 
-    if (!name || !userId) {
+    if (!authUserId) {
       return NextResponse.json(
-        { error: "Name and userId are required" },
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { name } = body;
+
+    if (!name) {
+      return NextResponse.json(
+        { error: "Player name is required" },
         { status: 400 }
       );
     }
 
-    const player = await PlayerService.createPlayer(userId, name);
+    // Use RLS context to ensure player is created for authenticated user
+    const player = await withDatabaseUserContext(authUserId, async () => {
+      return await PlayerService.createPlayer(name, authUserId);
+    });
+
     return NextResponse.json(player, { status: 201 });
   } catch (error) {
     console.error("Error creating player:", error);

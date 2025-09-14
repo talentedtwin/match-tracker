@@ -1,24 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { withDatabaseUserContext } from "@/lib/db-utils";
 
-// GET /api/player-match-stats - Get all player match stats
+// GET /api/player-match-stats - Get all player match stats for authenticated user
 export async function GET(request: NextRequest) {
   try {
+    // Get the authenticated user from Clerk
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get("matchId");
     const playerId = searchParams.get("playerId");
 
-    const where: { matchId?: string; playerId?: string } = {};
-    if (matchId) where.matchId = matchId;
-    if (playerId) where.playerId = playerId;
+    // Use RLS context to ensure users only see their own data
+    const stats = await withDatabaseUserContext(userId, async () => {
+      const where: { matchId?: string; playerId?: string } = {};
+      if (matchId) where.matchId = matchId;
+      if (playerId) where.playerId = playerId;
 
-    const stats = await prisma.playerMatchStat.findMany({
-      where,
-      include: {
-        player: true,
-        match: true,
-      },
-      orderBy: { match: { date: "desc" } },
+      return await prisma.playerMatchStat.findMany({
+        where,
+        include: {
+          player: true,
+          match: true,
+        },
+        orderBy: { match: { date: "desc" } },
+      });
     });
 
     return NextResponse.json(stats);
@@ -31,9 +46,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/player-match-stats - Create player match stats
+// POST /api/player-match-stats - Create player match stats for authenticated user
 export async function POST(request: NextRequest) {
   try {
+    // Get the authenticated user from Clerk
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized - User not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { playerId, matchId, goals, assists } = body;
 
@@ -44,17 +69,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stat = await prisma.playerMatchStat.create({
-      data: {
-        playerId,
-        matchId,
-        goals: goals || 0,
-        assists: assists || 0,
-      },
-      include: {
-        player: true,
-        match: true,
-      },
+    // Use RLS context for database operations
+    const stat = await withDatabaseUserContext(userId, async () => {
+      return await prisma.playerMatchStat.create({
+        data: {
+          playerId,
+          matchId,
+          goals: goals || 0,
+          assists: assists || 0,
+        },
+        include: {
+          player: true,
+          match: true,
+        },
+      });
     });
 
     return NextResponse.json(stat, { status: 201 });

@@ -6,9 +6,6 @@ import SquadManagement from "../../components/SquadManagement";
 import { PlayerManagementSkeleton } from "../../components/Skeleton";
 import { User, Trophy, Target, Calendar } from "lucide-react";
 
-// Using the seeded user ID from the database
-const USER_ID = "test-user-id";
-
 const PlayersPage = () => {
   const {
     players,
@@ -16,7 +13,7 @@ const PlayersPage = () => {
     error: playersError,
     addPlayer,
     removePlayer,
-  } = usePlayers(USER_ID);
+  } = usePlayers();
 
   // Show loading state
   if (playersLoading) {

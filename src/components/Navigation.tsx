@@ -3,7 +3,17 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Home, History, Users, BarChart3 } from "lucide-react";
+import {
+  Menu,
+  X,
+  Home,
+  History,
+  Users,
+  BarChart3,
+  LogOut,
+  User,
+} from "lucide-react";
+import { useUser, SignOutButton } from "@clerk/nextjs";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -12,6 +22,7 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, isLoaded } = useUser();
 
   const navigationItems = [
     {
@@ -65,29 +76,57 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-8">
-              {navigationItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-green-100 text-green-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            <div className="hidden md:flex items-center space-x-4">
+              <nav className="flex space-x-8">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-green-100 text-green-700"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* User Info and Logout */}
+              {isLoaded && user && (
+                <div className="flex items-center space-x-3 border-l border-gray-200 pl-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-green-600" />
+                    </div>
+                    <span className="text-sm text-gray-700 font-medium">
+                      {user.firstName || user.emailAddresses[0]?.emailAddress}
+                    </span>
+                  </div>
+                  <SignOutButton>
+                    <button className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </SignOutButton>
+                </div>
+              )}
+            </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden">
+            <div className="md:hidden flex items-center">
+              {/* User avatar for mobile header */}
+              {isLoaded && user && (
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <User className="w-4 h-4 text-green-600" />
+                </div>
+              )}
               <button
                 onClick={toggleMenu}
                 className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -107,6 +146,26 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 bg-white border-t border-gray-200">
+              {/* User Info for Mobile */}
+              {isLoaded && user && (
+                <div className="px-3 py-3 border-b border-gray-200 mb-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {user.firstName || "User"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {user.emailAddresses[0]?.emailAddress}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Items */}
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -131,6 +190,26 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
                   </Link>
                 );
               })}
+
+              {/* Logout Button for Mobile */}
+              {isLoaded && user && (
+                <div className="border-t border-gray-200 pt-2">
+                  <SignOutButton>
+                    <button
+                      className="flex items-center space-x-3 px-3 py-3 w-full text-left rounded-md text-base font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      onClick={closeMenu}
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <div>
+                        <div>Logout</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Sign out of your account
+                        </div>
+                      </div>
+                    </button>
+                  </SignOutButton>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -6,20 +6,17 @@ import { useMatches } from "../../hooks/useApi";
 import { StatsPageSkeleton } from "../../components/Skeleton";
 import { TrendingUp, Users, Target, Award, BarChart3 } from "lucide-react";
 
-// Using the seeded user ID from the database
-const USER_ID = "test-user-id";
-
 const StatsPage: React.FC = () => {
   const {
     players,
     loading: playersLoading,
     error: playersError,
-  } = usePlayers(USER_ID);
+  } = usePlayers();
   const {
     matches,
     loading: matchesLoading,
     error: matchesError,
-  } = useMatches(USER_ID);
+  } = useMatches();
 
   const loading = playersLoading || matchesLoading;
   const error = playersError || matchesError;

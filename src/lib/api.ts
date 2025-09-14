@@ -47,21 +47,29 @@ export interface ApiUser {
 
 // Player API functions
 export const playerApi = {
-  async getAll(userId: string): Promise<ApiPlayer[]> {
-    const response = await fetch(
-      `${API_BASE}/players?userId=${encodeURIComponent(userId)}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch players");
+  async getAll(): Promise<ApiPlayer[]> {
+    const response = await fetch(`${API_BASE}/players`);
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required");
+      }
+      throw new Error("Failed to fetch players");
+    }
     return response.json();
   },
 
-  async create(name: string, userId: string): Promise<ApiPlayer> {
+  async create(name: string): Promise<ApiPlayer> {
     const response = await fetch(`${API_BASE}/players`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, userId }),
+      body: JSON.stringify({ name }),
     });
-    if (!response.ok) throw new Error("Failed to create player");
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required");
+      }
+      throw new Error("Failed to create player");
+    }
     return response.json();
   },
 
@@ -100,7 +108,6 @@ export const matchApi = {
     notes?: string;
     selectedPlayerIds?: string[];
     isFinished?: boolean;
-    userId: string;
     playerStats?: Array<{ playerId: string; goals?: number; assists?: number }>;
   }): Promise<ApiMatch> {
     const response = await fetch(`${API_BASE}/matches`, {

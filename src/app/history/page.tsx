@@ -6,15 +6,12 @@ import { useMatches } from "../../hooks/useApi";
 import MatchHistory from "../../components/MatchHistory";
 import { MatchHistorySkeleton } from "../../components/Skeleton";
 
-// Using the seeded user ID from the database
-const USER_ID = "test-user-id";
-
 const HistoryPage = () => {
   const {
     matches,
     loading: matchesLoading,
     error: matchesError,
-  } = useMatches(USER_ID);
+  } = useMatches();
 
   // Show loading state
   if (matchesLoading) {

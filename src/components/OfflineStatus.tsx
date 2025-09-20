@@ -70,20 +70,20 @@ const OfflineStatus: React.FC<OfflineStatusProps> = ({
     <div
       className={`flex items-center gap-3 px-4 py-2 rounded-lg border mb-4 ${
         isOnline
-          ? "bg-green-50 border-green-200"
-          : "bg-orange-50 border-orange-200"
+          ? "bg-green-500 border-green-700"
+          : "bg-orange-500 border-orange-700"
       }`}
     >
       {/* Connection Status */}
       <div className="flex items-center gap-2">
         {isOnline ? (
-          <Wifi className="w-4 h-4 text-green-600" />
+          <Wifi className="w-4 h-4 text-white" />
         ) : (
-          <WifiOff className="w-4 h-4 text-orange-600" />
+          <WifiOff className="w-4 h-4 text-white" />
         )}
         <span
           className={`text-sm font-medium ${
-            isOnline ? "text-green-700" : "text-orange-700"
+            isOnline ? "text-white" : "text-white"
           }`}
         >
           {isOnline ? "Online" : "Offline"}

@@ -48,7 +48,9 @@ export interface ApiUser {
 // Player API functions
 export const playerApi = {
   async getAll(): Promise<ApiPlayer[]> {
-    const response = await fetch(`${API_BASE}/players`);
+    const response = await fetch(`${API_BASE}/players`, {
+      credentials: "include",
+    });
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error("Authentication required");
@@ -62,6 +64,7 @@ export const playerApi = {
     const response = await fetch(`${API_BASE}/players`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ name }),
     });
     if (!response.ok) {
@@ -77,6 +80,7 @@ export const playerApi = {
     const response = await fetch(`${API_BASE}/players/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error("Failed to update player");
@@ -86,6 +90,7 @@ export const playerApi = {
   async delete(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/players/${id}`, {
       method: "DELETE",
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to delete player");
   },
@@ -94,7 +99,9 @@ export const playerApi = {
 // Match API functions
 export const matchApi = {
   async getAll(): Promise<ApiMatch[]> {
-    const response = await fetch(`${API_BASE}/matches`);
+    const response = await fetch(`${API_BASE}/matches`, {
+      credentials: "include",
+    });
     if (!response.ok) throw new Error("Failed to fetch matches");
     return response.json();
   },
@@ -114,6 +121,7 @@ export const matchApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to create match");
     return response.json();
@@ -124,6 +132,7 @@ export const matchApi = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to update match");
     return response.json();
@@ -132,6 +141,7 @@ export const matchApi = {
   async delete(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/matches/${id}`, {
       method: "DELETE",
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to delete match");
   },
@@ -147,7 +157,9 @@ export const playerMatchStatsApi = {
     if (matchId) params.append("matchId", matchId);
     if (playerId) params.append("playerId", playerId);
 
-    const response = await fetch(`${API_BASE}/player-match-stats?${params}`);
+    const response = await fetch(`${API_BASE}/player-match-stats?${params}`, {
+      credentials: "include",
+    });
     if (!response.ok) throw new Error("Failed to fetch player match stats");
     return response.json();
   },
@@ -162,6 +174,7 @@ export const playerMatchStatsApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to create player match stat");
     return response.json();
@@ -175,6 +188,7 @@ export const playerMatchStatsApi = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to update player match stat");
     return response.json();
@@ -183,6 +197,7 @@ export const playerMatchStatsApi = {
   async delete(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/player-match-stats/${id}`, {
       method: "DELETE",
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to delete player match stat");
   },
@@ -191,7 +206,9 @@ export const playerMatchStatsApi = {
 // User API functions
 export const userApi = {
   async getAll(): Promise<ApiUser[]> {
-    const response = await fetch(`${API_BASE}/users`);
+    const response = await fetch(`${API_BASE}/users`, {
+      credentials: "include",
+    });
     if (!response.ok) throw new Error("Failed to fetch users");
     return response.json();
   },
@@ -201,13 +218,16 @@ export const userApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+      credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to create user");
     return response.json();
   },
 
   async getById(id: string): Promise<ApiUser> {
-    const response = await fetch(`${API_BASE}/users/${id}`);
+    const response = await fetch(`${API_BASE}/users/${id}`, {
+      credentials: "include",
+    });
     if (!response.ok) throw new Error("Failed to fetch user");
     return response.json();
   },
@@ -256,7 +276,9 @@ export const statsApi = {
       }>;
     };
   }> {
-    const response = await fetch(`${API_BASE}/stats?userId=${userId}`);
+    const response = await fetch(`${API_BASE}/stats?userId=${userId}`, {
+      credentials: "include",
+    });
     if (!response.ok) throw new Error("Failed to fetch stats");
     return response.json();
   },

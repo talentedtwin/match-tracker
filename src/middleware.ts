@@ -22,9 +22,10 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Protect all other routes
   if (isProtectedRoute(req)) {
+    const signInUrl = new URL("/sign-in", req.url);
     await auth.protect({
-      unauthenticatedUrl: "/sign-in",
-      unauthorizedUrl: "/sign-in",
+      unauthenticatedUrl: signInUrl.toString(),
+      unauthorizedUrl: signInUrl.toString(),
     });
   }
 });

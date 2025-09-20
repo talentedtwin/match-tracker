@@ -13,19 +13,13 @@ import { DashboardSkeleton } from "../../components/Skeleton";
 import { usePlayers, useMatches } from "../../hooks/useApi";
 import { useOffline } from "../../hooks/useOffline";
 import { Player, ScheduledMatch } from "../../types";
-import { useUser } from "@clerk/nextjs";
 
 const FootballTracker = () => {
-  // Get authenticated user from Clerk
-  const { user } = useUser();
-
   // API-based state management
   const {
     players,
     loading: playersLoading,
     error: playersError,
-    addPlayer,
-    removePlayer,
   } = usePlayers();
 
   const {
@@ -100,24 +94,6 @@ const FootballTracker = () => {
       });
     }
   }, [currentMatch, teamScore, saveOfflineState]);
-
-  // Handle adding a new player
-  const handleAddPlayer = async (name: string) => {
-    try {
-      await addPlayer(name);
-    } catch (error) {
-      console.error("Failed to add player:", error);
-    }
-  };
-
-  // Handle removing a player
-  const handleRemovePlayer = async (playerId: string) => {
-    try {
-      await removePlayer(playerId);
-    } catch (error) {
-      console.error("Failed to remove player:", error);
-    }
-  };
 
   // Handle updating player stats during a match - memoized to prevent re-renders
   const handleUpdatePlayerStat = useCallback(

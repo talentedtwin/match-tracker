@@ -4,9 +4,11 @@ import {
   matchApi,
   playerMatchStatsApi,
   statsApi,
+  teamApi,
   ApiPlayer,
   ApiMatch,
   ApiPlayerMatchStat,
+  ApiTeam,
 } from "../lib/api";
 
 // Hook for managing players
@@ -29,9 +31,9 @@ export function usePlayers() {
   }, []); // Remove userId dependency since auth is handled server-side
 
   const addPlayer = useCallback(
-    async (name: string) => {
+    async (name: string, teamId?: string) => {
       try {
-        const newPlayer = await playerApi.create(name);
+        const newPlayer = await playerApi.create(name, teamId);
         setPlayers((prev) => [...prev, newPlayer]);
         return newPlayer;
       } catch (err) {
@@ -43,7 +45,15 @@ export function usePlayers() {
   );
 
   const updatePlayer = useCallback(
-    async (id: string, data: Partial<ApiPlayer>) => {
+    async (
+      id: string,
+      data: Partial<{
+        name: string;
+        goals: number;
+        assists: number;
+        teamId: string | null;
+      }>
+    ) => {
       try {
         const updatedPlayer = await playerApi.update(id, data);
         setPlayers((prev) =>
@@ -320,5 +330,73 @@ export function useStats(userId: string) {
     loading,
     error,
     refetch: fetchStats,
+  };
+}
+
+// Hook for managing teams
+export function useTeams() {
+  const [teams, setTeams] = useState<ApiTeam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTeams = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await teamApi.getAll();
+      setTeams(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch teams");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const addTeam = useCallback(async (name: string) => {
+    try {
+      const newTeam = await teamApi.create(name);
+      setTeams((prev) => [...prev, newTeam]);
+      return newTeam;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add team");
+      throw err;
+    }
+  }, []);
+
+  const updateTeam = useCallback(async (id: string, data: Partial<ApiTeam>) => {
+    try {
+      const updatedTeam = await teamApi.update(id, data);
+      setTeams((prev) =>
+        prev.map((team) => (team.id === id ? updatedTeam : team))
+      );
+      return updatedTeam;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update team");
+      throw err;
+    }
+  }, []);
+
+  const removeTeam = useCallback(async (id: string) => {
+    try {
+      await teamApi.delete(id);
+      setTeams((prev) => prev.filter((team) => team.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove team");
+      throw err;
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
+
+  return {
+    teams,
+    loading,
+    error,
+    addTeam,
+    updateTeam,
+    removeTeam,
+    refetch: fetchTeams,
   };
 }

@@ -14,8 +14,9 @@ datasource db {
 
 model User {
   id                  String    @id // Clerk user ID (no @default since it comes from Clerk)
-  email               String    @unique
-  name                String?
+  email               String    @unique @db.Text // Hex-encoded encrypted data (text-safe binary)
+  name                String?   @db.Text // Hex-encoded encrypted data (text-safe binary)
+  isPremium           Boolean   @default(false) // Premium subscription status
   gdprConsentDate     DateTime? // When user gave GDPR consent
   consentWithdrawn    Boolean   @default(false) // If user withdrew consent
   dataRetentionUntil  DateTime? // When to delete user data
@@ -26,10 +27,28 @@ model User {
   updatedAt           DateTime  @updatedAt
 
   // Relations
+  teams   Team[]
   players Player[]
   matches Match[]
 
   @@map("users")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @db.Text // Hex-encoded encrypted data (text-safe binary)
+  isDeleted Boolean  @default(false) // Soft deletion flag
+  deletedAt DateTime? // When team was marked for deletion
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  players   Player[]
+  matches   Match[]
+
+  @@map("teams")
 }
 
 model Player {
@@ -45,6 +64,8 @@ model Player {
   // Relations
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   matchStats PlayerMatchStat[]
 
   @@map("players")
@@ -66,6 +87,8 @@ model Match {
   // Relations
   userId       String
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId       String?
+  team         Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
   playerStats  PlayerMatchStat[]
 
   @@map("matches")

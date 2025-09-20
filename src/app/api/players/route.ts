@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { PlayerService } from "@/lib/playerService";
-import { withDatabaseUserContext } from "@/lib/db-utils";
+import { ensureUserExists } from "@/lib/user-utils";
 
 // GET /api/players - Get all players for the authenticated user
 export async function GET() {
@@ -16,10 +16,11 @@ export async function GET() {
       );
     }
 
-    // Use RLS context to ensure users only see their own data
-    const players = await withDatabaseUserContext(userId, async () => {
-      return await PlayerService.getPlayersForUser(userId);
-    });
+    // Ensure user exists in database
+    await ensureUserExists(userId);
+
+    // Get players for the user
+    const players = await PlayerService.getPlayersForUser(userId);
 
     return NextResponse.json(players);
   } catch (error) {
@@ -44,8 +45,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure user exists in database
+    await ensureUserExists(authUserId);
+
     const body = await request.json();
-    const { name } = body;
+    const { name, teamId } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -54,10 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use RLS context to ensure player is created for authenticated user
-    const player = await withDatabaseUserContext(authUserId, async () => {
-      return await PlayerService.createPlayer(name, authUserId);
-    });
+    // Create player
+    const player = await PlayerService.createPlayer(name, authUserId, teamId);
 
     return NextResponse.json(player, { status: 201 });
   } catch (error) {

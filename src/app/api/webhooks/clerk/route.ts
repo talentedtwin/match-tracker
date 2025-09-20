@@ -71,9 +71,12 @@ export async function POST(req: NextRequest) {
 async function handleUserCreated(evt: WebhookEvent) {
   if (evt.type !== "user.created") return;
 
+  console.log("Processing user.created webhook:", evt.data);
+
   const { id, email_addresses, first_name, last_name } = evt.data;
 
   if (!id) {
+    console.error("User ID is missing in user.created event data");
     throw new Error("User ID is missing in user.created event data");
   }
 
@@ -82,19 +85,28 @@ async function handleUserCreated(evt: WebhookEvent) {
   );
 
   if (!primaryEmail?.email_address) {
+    console.error("Primary email address is missing for user creation");
     throw new Error("Primary email address is missing for user creation");
   }
 
   const fullName = [first_name, last_name].filter(Boolean).join(" ").trim();
 
-  // Create user in database
-  await createUser({
-    id,
-    email: primaryEmail.email_address,
-    name: fullName || "Unknown User",
-  });
+  try {
+    // Create user in database
+    const user = await createUser({
+      id,
+      email: primaryEmail.email_address,
+      name: fullName || "Unknown User",
+    });
 
-  console.log(`Created user: ${id} (${primaryEmail.email_address})`);
+    console.log(
+      `Successfully created user: ${id} (${primaryEmail.email_address})`,
+      user
+    );
+  } catch (error) {
+    console.error(`Failed to create user ${id}:`, error);
+    throw error;
+  }
 }
 
 async function handleUserUpdated(evt: WebhookEvent) {

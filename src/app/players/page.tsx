@@ -1,42 +1,82 @@
 "use client";
 
 import React from "react";
-import { usePlayers } from "../../hooks/useApi";
-import SquadManagement from "../../components/SquadManagement";
+import { usePlayers, useTeams } from "../../hooks/useApi";
+import TeamManagement from "../../components/TeamManagement";
 import { PlayerManagementSkeleton } from "../../components/Skeleton";
-import { User, Trophy, Target, Calendar } from "lucide-react";
+import { Users, Crown, Target, Trophy } from "lucide-react";
 
-const PlayersPage = () => {
+const TeamManagementPage = () => {
   const {
     players,
     loading: playersLoading,
     error: playersError,
     addPlayer,
     removePlayer,
+    updatePlayer,
   } = usePlayers();
 
+  const {
+    teams,
+    loading: teamsLoading,
+    error: teamsError,
+    addTeam,
+    updateTeam,
+    removeTeam,
+  } = useTeams();
+
+  const loading = playersLoading || teamsLoading;
+  const error = playersError || teamsError;
+
+  // Mock premium status - in real app, this would come from user subscription data
+  const isPremium = false; // TODO: Replace with actual premium status from user data
+
   // Show loading state
-  if (playersLoading) {
+  if (loading) {
     return <PlayerManagementSkeleton />;
   }
 
   // Show error state
-  if (playersError) {
+  if (error) {
     return (
       <div className="p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h2 className="text-red-800 font-semibold">Error</h2>
-            <p className="text-red-700">{playersError}</p>
+            <p className="text-red-700">{error}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  const handleAddPlayer = async (name: string) => {
+  const handleAddTeam = async (name: string) => {
     try {
-      await addPlayer(name);
+      await addTeam(name);
+    } catch (error) {
+      console.error("Failed to add team:", error);
+    }
+  };
+
+  const handleUpdateTeam = async (id: string, name: string) => {
+    try {
+      await updateTeam(id, { name });
+    } catch (error) {
+      console.error("Failed to update team:", error);
+    }
+  };
+
+  const handleRemoveTeam = async (id: string) => {
+    try {
+      await removeTeam(id);
+    } catch (error) {
+      console.error("Failed to remove team:", error);
+    }
+  };
+
+  const handleAddPlayer = async (name: string, teamId?: string) => {
+    try {
+      await addPlayer(name, teamId);
     } catch (error) {
       console.error("Failed to add player:", error);
     }
@@ -50,24 +90,64 @@ const PlayersPage = () => {
     }
   };
 
+  const handleAssignPlayerToTeam = async (
+    playerId: string,
+    teamId: string | null
+  ) => {
+    try {
+      await updatePlayer(playerId, { teamId: teamId || undefined });
+    } catch (error) {
+      console.error("Failed to assign player to team:", error);
+    }
+  };
+
   return (
     <div className="p-4">
       <div className="max-w-4xl mx-auto">
         {/* Page Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
-            👥 Squad Management
-          </h1>
-          <p className="text-center text-gray-600">
-            Manage your team roster and player information
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+                <Users className="w-8 h-8 mr-3 text-blue-500" />
+                Team Management
+              </h1>
+              <p className="text-gray-600">
+                Manage your teams and assign players to create organized squads
+              </p>
+            </div>
+            {!isPremium && (
+              <div className="text-right">
+                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800 mb-2">
+                  <Crown className="w-4 h-4 mr-1" />
+                  Free Plan
+                </div>
+                <p className="text-xs text-gray-500">1 team limit</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Squad Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center">
-              <User className="w-8 h-8 text-blue-500 mr-3" />
+              <Users className="w-8 h-8 text-blue-500 mr-3" />
+              <div>
+                <p className="text-sm text-gray-600">Teams Created</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {teams.length}
+                  {!isPremium && (
+                    <span className="text-sm text-gray-500"> / 1</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center">
+              <Target className="w-8 h-8 text-green-500 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Total Players</p>
                 <p className="text-2xl font-bold text-gray-800">
@@ -79,7 +159,7 @@ const PlayersPage = () => {
 
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center">
-              <Target className="w-8 h-8 text-green-500 mr-3" />
+              <Trophy className="w-8 h-8 text-yellow-500 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Total Goals</p>
                 <p className="text-2xl font-bold text-gray-800">
@@ -88,113 +168,23 @@ const PlayersPage = () => {
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <Trophy className="w-8 h-8 text-yellow-500 mr-3" />
-              <div>
-                <p className="text-sm text-gray-600">Total Assists</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {players.reduce((sum, player) => sum + player.assists, 0)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center">
-              <Calendar className="w-8 h-8 text-purple-500 mr-3" />
-              <div>
-                <p className="text-sm text-gray-600">Squad Size</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {players.length}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Squad Management Component */}
-        <SquadManagement
+        {/* Team Management Component */}
+        <TeamManagement
+          teams={teams}
           players={players}
+          isPremium={isPremium}
+          onAddTeam={handleAddTeam}
+          onUpdateTeam={handleUpdateTeam}
+          onRemoveTeam={handleRemoveTeam}
           onAddPlayer={handleAddPlayer}
           onRemovePlayer={handleRemovePlayer}
+          onAssignPlayerToTeam={handleAssignPlayerToTeam}
         />
-
-        {/* Player Statistics Table */}
-        {players.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Player Statistics
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="pb-3 text-gray-600 font-medium">Player</th>
-                    <th className="pb-3 text-gray-600 font-medium text-center">
-                      Goals
-                    </th>
-                    <th className="pb-3 text-gray-600 font-medium text-center">
-                      Assists
-                    </th>
-                    <th className="pb-3 text-gray-600 font-medium text-center">
-                      Total Points
-                    </th>
-                    <th className="pb-3 text-gray-600 font-medium text-center">
-                      Goals per Game
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {players
-                    .sort((a, b) => b.goals + b.assists - (a.goals + a.assists))
-                    .map((player, index) => (
-                      <tr
-                        key={player.id}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="py-3">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                              <span className="text-green-600 font-semibold text-sm">
-                                {index + 1}
-                              </span>
-                            </div>
-                            <span className="font-medium text-gray-800">
-                              {player.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 text-center">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {player.goals}
-                          </span>
-                        </td>
-                        <td className="py-3 text-center">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {player.assists}
-                          </span>
-                        </td>
-                        <td className="py-3 text-center">
-                          <span className="font-semibold text-gray-800">
-                            {player.goals + player.assists}
-                          </span>
-                        </td>
-                        <td className="py-3 text-center text-gray-600">
-                          {/* This would need match data to calculate properly */}
-                          <span className="text-sm">-</span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-export default PlayersPage;
+export default TeamManagementPage;

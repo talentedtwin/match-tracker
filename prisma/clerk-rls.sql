@@ -3,6 +3,7 @@
 
 -- Enable Row Level Security on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE player_match_stats ENABLE ROW LEVEL SECURITY;
@@ -12,6 +13,11 @@ DROP POLICY IF EXISTS "Users can view own profile" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
 DROP POLICY IF EXISTS "Users can insert own profile" ON users;
 DROP POLICY IF EXISTS "Users can delete own profile" ON users;
+
+DROP POLICY IF EXISTS "Users can view own teams" ON teams;
+DROP POLICY IF EXISTS "Users can insert own teams" ON teams;
+DROP POLICY IF EXISTS "Users can update own teams" ON teams;
+DROP POLICY IF EXISTS "Users can delete own teams" ON teams;
 
 DROP POLICY IF EXISTS "Users can view own players" ON players;
 DROP POLICY IF EXISTS "Users can insert own players" ON players;
@@ -62,6 +68,29 @@ CREATE POLICY "Users can update own profile" ON users
 -- Users can delete their own profile (soft deletion)
 CREATE POLICY "Users can delete own profile" ON users
     FOR DELETE USING (id = get_current_user_id());
+
+-- =============================================================================
+-- TEAMS TABLE POLICIES
+-- =============================================================================
+
+-- Users can view their own teams (excluding soft-deleted ones by default)
+CREATE POLICY "Users can view own teams" ON teams
+    FOR SELECT USING (
+        "userId" = get_current_user_id() 
+        AND ("isDeleted" = false OR "isDeleted" IS NULL)
+    );
+
+-- Users can insert teams for themselves
+CREATE POLICY "Users can insert own teams" ON teams
+    FOR INSERT WITH CHECK ("userId" = get_current_user_id());
+
+-- Users can update their own teams
+CREATE POLICY "Users can update own teams" ON teams
+    FOR UPDATE USING ("userId" = get_current_user_id());
+
+-- Users can delete their own teams (typically soft deletion)
+CREATE POLICY "Users can delete own teams" ON teams
+    FOR DELETE USING ("userId" = get_current_user_id());
 
 -- =============================================================================
 -- PLAYERS TABLE POLICIES
@@ -199,6 +228,14 @@ CREATE POLICY "Users can view own deleted data for GDPR" ON players
         AND current_setting('app.gdpr_export_mode', true) = 'true'
     );
 
+-- Policy to allow viewing soft-deleted teams for GDPR export purposes
+CREATE POLICY "Users can view own deleted teams for GDPR" ON teams
+    FOR SELECT USING (
+        "userId" = get_current_user_id() 
+        AND "isDeleted" = true
+        AND current_setting('app.gdpr_export_mode', true) = 'true'
+    );
+
 -- =============================================================================
 -- TESTING QUERIES
 -- =============================================================================
@@ -210,11 +247,14 @@ CREATE POLICY "Users can view own deleted data for GDPR" ON players
 -- 
 -- 2. Try queries:
 -- SELECT * FROM users;     -- Should only show the current user
+-- SELECT * FROM teams;     -- Should only show the current user's teams
 -- SELECT * FROM players;   -- Should only show the current user's players
 -- SELECT * FROM matches;   -- Should only show the current user's matches
+-- SELECT * FROM player_match_stats; -- Should only show stats for current user's data
 -- 
 -- 3. Try with different user ID:
 -- SELECT set_current_user_id('different_user_id');
+-- SELECT * FROM teams;     -- Should show different results or no results
 -- SELECT * FROM players;   -- Should show different results or no results
 
 -- =============================================================================
@@ -222,6 +262,12 @@ CREATE POLICY "Users can view own deleted data for GDPR" ON players
 -- =============================================================================
 
 -- For better performance, consider adding indexes on userId columns:
--- CREATE INDEX CONCURRENTLY idx_players_user_id ON players("userId");
--- CREATE INDEX CONCURRENTLY idx_matches_user_id ON matches("userId");
--- CREATE INDEX CONCURRENTLY idx_players_user_deleted ON players("userId", "isDeleted");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_id ON users(id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_teams_user_id ON teams("userId");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_teams_user_deleted ON teams("userId", "isDeleted");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_players_user_id ON players("userId");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_players_user_deleted ON players("userId", "isDeleted");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_matches_user_id ON matches("userId");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_matches_team_id ON matches("teamId");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_player_match_stats_player ON player_match_stats("playerId");
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_player_match_stats_match ON player_match_stats("matchId");

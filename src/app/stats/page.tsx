@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { usePlayers } from "../../hooks/useApi";
-import { useMatches } from "../../hooks/useApi";
+import { usePlayers, useMatches, useTeams } from "../../hooks/useApi";
+import CreateTeamPrompt from "../../components/CreateTeamPrompt";
 import { StatsPageSkeleton } from "../../components/Skeleton";
 import { TrendingUp, Users, Target, Award, BarChart3 } from "lucide-react";
 
@@ -17,9 +17,10 @@ const StatsPage: React.FC = () => {
     loading: matchesLoading,
     error: matchesError,
   } = useMatches();
+  const { teams, loading: teamsLoading, error: teamsError } = useTeams();
 
-  const loading = playersLoading || matchesLoading;
-  const error = playersError || matchesError;
+  const loading = playersLoading || matchesLoading || teamsLoading;
+  const error = playersError || matchesError || teamsError;
 
   // Calculate team statistics
   const teamStats = React.useMemo(() => {
@@ -156,6 +157,29 @@ const StatsPage: React.FC = () => {
             </div>
             <div className="text-red-500">{error}</div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show create team prompt if no teams exist
+  if (!teams || teams.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
+              📈 Team Statistics
+            </h1>
+            <p className="text-center text-gray-600">
+              Analyze your team&apos;s performance and player stats
+            </p>
+          </div>
+
+          <CreateTeamPrompt
+            title="No Team Found"
+            message="Create a team and add players to start viewing detailed statistics and performance analytics."
+          />
         </div>
       </div>
     );

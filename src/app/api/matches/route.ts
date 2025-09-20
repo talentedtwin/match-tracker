@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { withDatabaseUserContext } from "@/lib/db-utils";
+import { ensureUserExists } from "@/lib/user-utils";
 
 interface PlayerStatInput {
   playerId: string;
@@ -21,6 +22,9 @@ export async function GET() {
         { status: 401 }
       );
     }
+
+    // Ensure user exists in database
+    await ensureUserExists(userId);
 
     // Use RLS context to ensure users only see their own data
     const matches = await withDatabaseUserContext(userId, async () => {
@@ -58,6 +62,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Ensure user exists in database
+    await ensureUserExists(userId);
 
     const body = await request.json();
     const {

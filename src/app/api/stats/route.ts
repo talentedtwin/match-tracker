@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { withDatabaseUserContext } from "@/lib/db-utils";
+import { ensureUserExists } from "@/lib/user-utils";
 
 // GET /api/stats - Get overall statistics for authenticated user
 export async function GET() {
@@ -15,6 +16,9 @@ export async function GET() {
         { status: 401 }
       );
     }
+
+    // Ensure user exists in database
+    await ensureUserExists(userId);
 
     // Use RLS context to ensure users only see their own data
     const statsData = await withDatabaseUserContext(userId, async () => {

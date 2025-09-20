@@ -32,16 +32,18 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, goals, assists } = body;
+    const { name, goals, assists, teamId } = body;
 
     const updateData: Partial<{
       name: string;
       goals: number;
       assists: number;
+      teamId: string | null;
     }> = {};
     if (name !== undefined) updateData.name = name;
     if (goals !== undefined) updateData.goals = goals;
     if (assists !== undefined) updateData.assists = assists;
+    if (teamId !== undefined) updateData.teamId = teamId;
 
     const player = await PlayerService.updatePlayer(id, updateData);
     return NextResponse.json(player);

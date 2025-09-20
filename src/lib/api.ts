@@ -3,12 +3,23 @@
 const API_BASE = "/api";
 
 // Types for API responses
+export interface ApiTeam {
+  id: string;
+  name: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  players?: ApiPlayer[];
+}
+
 export interface ApiPlayer {
   id: string;
   name: string;
   goals: number;
   assists: number;
   userId: string;
+  teamId?: string;
+  team?: ApiTeam;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +35,8 @@ export interface ApiMatch {
   notes?: string;
   selectedPlayerIds: string[];
   userId: string;
+  teamId?: string;
+  team?: ApiTeam;
   playerStats: ApiPlayerMatchStat[];
 }
 
@@ -41,6 +54,7 @@ export interface ApiUser {
   id: string;
   email: string;
   name: string | null;
+  isPremium: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,12 +74,12 @@ export const playerApi = {
     return response.json();
   },
 
-  async create(name: string): Promise<ApiPlayer> {
+  async create(name: string, teamId?: string): Promise<ApiPlayer> {
     const response = await fetch(`${API_BASE}/players`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, teamId }),
     });
     if (!response.ok) {
       if (response.status === 401) {
@@ -76,7 +90,15 @@ export const playerApi = {
     return response.json();
   },
 
-  async update(id: string, data: Partial<ApiPlayer>): Promise<ApiPlayer> {
+  async update(
+    id: string,
+    data: Partial<{
+      name: string;
+      goals: number;
+      assists: number;
+      teamId: string | null;
+    }>
+  ): Promise<ApiPlayer> {
     const response = await fetch(`${API_BASE}/players/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -229,6 +251,68 @@ export const userApi = {
       credentials: "include",
     });
     if (!response.ok) throw new Error("Failed to fetch user");
+    return response.json();
+  },
+};
+
+// Team API functions
+export const teamApi = {
+  async getAll(): Promise<ApiTeam[]> {
+    const response = await fetch(`${API_BASE}/teams`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required");
+      }
+      throw new Error("Failed to fetch teams");
+    }
+    return response.json();
+  },
+
+  async create(name: string): Promise<ApiTeam> {
+    const response = await fetch(`${API_BASE}/teams`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication required");
+      }
+      if (response.status === 403) {
+        throw new Error("Premium subscription required for multiple teams");
+      }
+      throw new Error("Failed to create team");
+    }
+    return response.json();
+  },
+
+  async update(id: string, data: Partial<ApiTeam>): Promise<ApiTeam> {
+    const response = await fetch(`${API_BASE}/teams/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Failed to update team");
+    return response.json();
+  },
+
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/teams/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error("Failed to delete team");
+  },
+
+  async getById(id: string): Promise<ApiTeam> {
+    const response = await fetch(`${API_BASE}/teams/${id}`, {
+      credentials: "include",
+    });
+    if (!response.ok) throw new Error("Failed to fetch team");
     return response.json();
   },
 };

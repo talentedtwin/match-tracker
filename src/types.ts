@@ -1,8 +1,18 @@
+export interface Team {
+  id: string;
+  name: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Player {
   id: string;
   name: string;
   goals: number;
   assists: number;
+  teamId?: string;
+  team?: Team;
 }
 
 export interface PlayerStat {

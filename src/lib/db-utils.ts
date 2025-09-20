@@ -14,7 +14,9 @@ export async function setDatabaseUserContext(userId: string): Promise<void> {
   }
 
   try {
+    // TODO: Temporarily disabled until RLS functions are set up in database
     await prisma.$executeRaw`SELECT set_current_user_id(${userId})`;
+    console.log(`Database user context set for user: ${userId}`);
   } catch (error) {
     console.error("Failed to set database user context:", error);
     throw new Error("Database context setup failed");
@@ -26,7 +28,9 @@ export async function setDatabaseUserContext(userId: string): Promise<void> {
  */
 export async function clearDatabaseUserContext(): Promise<void> {
   try {
+    // TODO: Temporarily disabled until RLS functions are set up in database
     await prisma.$executeRaw`SELECT set_config('app.current_user_id', NULL, true)`;
+    console.log("Database user context cleared");
   } catch (error) {
     console.error("Failed to clear database user context:", error);
     // Don't throw here as this is cleanup
@@ -148,11 +152,272 @@ export const dbOperations = {
           userId,
           isDeleted: false,
         },
+        include: {
+          team: true,
+        },
         orderBy: { name: "asc" },
       })
     );
   },
 
+  async getStats(userId: string) {
+    return retryDbOperation(() =>
+      prisma.match.findMany({
+        where: { userId },
+        include: {
+          playerStats: {
+            include: {
+              player: true,
+            },
+          },
+        },
+      })
+    );
+  },
+};
+
+// Main database utilities
+export const dbUtils = {
+  // User operations
+  async getUser(userId: string) {
+    return retryDbOperation(() =>
+      prisma.user.findUnique({
+        where: { id: userId },
+      })
+    );
+  },
+
+  async createUser(data: { id: string; email: string; name?: string }) {
+    return retryDbOperation(() =>
+      prisma.user.create({
+        data,
+      })
+    );
+  },
+
+  async updateUser(
+    userId: string,
+    data: Partial<{ name: string; isPremium: boolean }>
+  ) {
+    return retryDbOperation(() =>
+      prisma.user.update({
+        where: { id: userId },
+        data,
+      })
+    );
+  },
+
+  // Team operations
+  async getTeams(userId: string) {
+    return retryDbOperation(() =>
+      prisma.team.findMany({
+        where: {
+          userId,
+          isDeleted: false,
+        },
+        include: {
+          players: {
+            where: {
+              isDeleted: false,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    );
+  },
+
+  async getTeam(teamId: string, userId: string) {
+    return retryDbOperation(() =>
+      prisma.team.findFirst({
+        where: {
+          id: teamId,
+          userId,
+          isDeleted: false,
+        },
+        include: {
+          players: {
+            where: {
+              isDeleted: false,
+            },
+          },
+        },
+      })
+    );
+  },
+
+  async createTeam(data: { name: string; userId: string }) {
+    return retryDbOperation(() =>
+      prisma.team.create({
+        data,
+      })
+    );
+  },
+
+  async updateTeam(teamId: string, data: Partial<{ name: string }>) {
+    return retryDbOperation(() =>
+      prisma.team.update({
+        where: { id: teamId },
+        data,
+      })
+    );
+  },
+
+  async deleteTeam(teamId: string) {
+    return retryDbOperation(() =>
+      prisma.team.update({
+        where: { id: teamId },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      })
+    );
+  },
+
+  // Player operations
+  async getPlayers(userId: string) {
+    return retryDbOperation(() =>
+      prisma.player.findMany({
+        where: {
+          userId,
+          isDeleted: false,
+        },
+        include: {
+          team: true,
+        },
+        orderBy: { name: "asc" },
+      })
+    );
+  },
+
+  async createPlayer(data: { name: string; userId: string; teamId?: string }) {
+    return retryDbOperation(() =>
+      prisma.player.create({
+        data,
+        include: {
+          team: true,
+        },
+      })
+    );
+  },
+
+  async updatePlayer(
+    playerId: string,
+    data: Partial<{
+      name: string;
+      teamId: string | null;
+      goals: number;
+      assists: number;
+    }>
+  ) {
+    return retryDbOperation(() =>
+      prisma.player.update({
+        where: { id: playerId },
+        data,
+        include: {
+          team: true,
+        },
+      })
+    );
+  },
+
+  async deletePlayer(playerId: string) {
+    return retryDbOperation(() =>
+      prisma.player.update({
+        where: { id: playerId },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      })
+    );
+  },
+
+  // Match operations
+  async getMatches(userId: string) {
+    return retryDbOperation(() =>
+      prisma.match.findMany({
+        where: { userId },
+        include: {
+          team: true,
+          playerStats: {
+            include: {
+              player: true,
+            },
+          },
+        },
+        orderBy: { date: "desc" },
+      })
+    );
+  },
+
+  async createMatch(data: {
+    opponent: string;
+    date: Date;
+    userId: string;
+    teamId?: string;
+    goalsFor?: number;
+    goalsAgainst?: number;
+    matchType?: string;
+    notes?: string;
+    selectedPlayerIds?: string[];
+    isFinished?: boolean;
+  }) {
+    return retryDbOperation(() =>
+      prisma.match.create({
+        data,
+        include: {
+          team: true,
+          playerStats: {
+            include: {
+              player: true,
+            },
+          },
+        },
+      })
+    );
+  },
+
+  async updateMatch(
+    matchId: string,
+    data: Partial<{
+      opponent: string;
+      date: Date;
+      goalsFor: number;
+      goalsAgainst: number;
+      matchType: string;
+      notes: string;
+      selectedPlayerIds: string[];
+      isFinished: boolean;
+      teamId: string;
+    }>
+  ) {
+    return retryDbOperation(() =>
+      prisma.match.update({
+        where: { id: matchId },
+        data,
+        include: {
+          team: true,
+          playerStats: {
+            include: {
+              player: true,
+            },
+          },
+        },
+      })
+    );
+  },
+
+  async deleteMatch(matchId: string) {
+    return retryDbOperation(() =>
+      prisma.match.delete({
+        where: { id: matchId },
+      })
+    );
+  },
+
+  // Stats operations
   async getStats(userId: string) {
     return retryDbOperation(() =>
       prisma.match.findMany({

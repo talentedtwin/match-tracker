@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { EncryptionService } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/users/[id] - Get a specific user
@@ -37,7 +38,19 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Decrypt sensitive fields before returning
+    const decryptedUser = {
+      ...user,
+      email: EncryptionService.decrypt(user.email),
+      name: user.name ? EncryptionService.decrypt(user.name) : null,
+      // Decrypt player names in the included data
+      players: user.players.map((player) => ({
+        ...player,
+        name: EncryptionService.decrypt(player.name),
+      })),
+    };
+
+    return NextResponse.json(decryptedUser);
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json(

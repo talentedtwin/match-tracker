@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { EncryptionService } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
-import { withDatabaseUserContext } from "@/lib/db-utils";
+import { createUser } from "@/lib/userService";
+import { ensureUserExists } from "@/lib/user-utils";
 
 // GET /api/users - Get authenticated user's profile
 export async function GET() {
@@ -16,26 +18,35 @@ export async function GET() {
       );
     }
 
-    // Use RLS context to get user's own data
-    const user = await withDatabaseUserContext(userId, async () => {
-      return await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          _count: {
-            select: {
-              players: true,
-              matches: true,
-            },
+    // Ensure user exists in database
+    await ensureUserExists(userId);
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        _count: {
+          select: {
+            players: true,
+            matches: true,
+            teams: true,
           },
         },
-      });
+      },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Decrypt sensitive fields before returning
+    const decryptedUser = {
+      ...user,
+      email: EncryptionService.decrypt(user.email),
+      name: user.name ? EncryptionService.decrypt(user.name) : null,
+    };
+
+    return NextResponse.json(decryptedUser);
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json(
@@ -45,7 +56,7 @@ export async function GET() {
   }
 }
 
-// POST /api/users - Create a new user (should typically be handled by webhook)
+// POST /api/users - Create a new user (fallback if webhook fails)
 export async function POST(request: NextRequest) {
   try {
     // Get the authenticated user from Clerk
@@ -65,18 +76,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Use RLS context for database operations
-    const user = await withDatabaseUserContext(userId, async () => {
-      return await prisma.user.create({
-        data: {
-          id: userId, // Use the authenticated user's ID from Clerk
-          email,
-          name: name || null,
-          gdprConsentDate: new Date(),
-          consentWithdrawn: false,
-          isDeleted: false,
-        },
-      });
+    // Create user directly without RLS context since they don't exist yet
+    const user = await createUser({
+      id: userId,
+      email,
+      name: name || "Unknown User",
     });
 
     return NextResponse.json(user, { status: 201 });
@@ -89,7 +93,7 @@ export async function POST(request: NextRequest) {
       error.code === "P2002"
     ) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "User already exists" },
         { status: 409 }
       );
     }

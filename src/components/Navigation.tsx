@@ -39,9 +39,9 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
     },
     {
       href: "/players",
-      label: "Players",
+      label: "Teams",
       icon: Users,
-      description: "Manage your squad",
+      description: "Manage teams and assign players",
     },
     {
       href: "/stats",

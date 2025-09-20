@@ -9,6 +9,7 @@ export interface EncryptedPlayer {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
+  teamId?: string | null;
 }
 
 export class PlayerService {
@@ -16,8 +17,9 @@ export class PlayerService {
    * Create a new player with encrypted name
    */
   static async createPlayer(
+    name: string,
     userId: string,
-    name: string
+    teamId?: string
   ): Promise<EncryptedPlayer> {
     const encryptedName = EncryptionService.encrypt(name);
 
@@ -25,6 +27,7 @@ export class PlayerService {
       data: {
         name: encryptedName,
         userId,
+        teamId,
       },
     });
 
@@ -78,12 +81,18 @@ export class PlayerService {
    */
   static async updatePlayer(
     playerId: string,
-    updates: Partial<{ name: string; goals: number; assists: number }>
+    updates: Partial<{
+      name: string;
+      goals: number;
+      assists: number;
+      teamId: string | null;
+    }>
   ): Promise<EncryptedPlayer> {
     const updateData: Partial<{
       name: string;
       goals: number;
       assists: number;
+      teamId: string | null;
     }> = { ...updates };
 
     if (updates.name) {

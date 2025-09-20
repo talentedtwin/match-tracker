@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { EncryptionService } from "./encryption";
 import {
   withDatabaseUserContext,
   enableGDPRExportMode,
@@ -11,7 +12,7 @@ export class UserService {
    */
   static async getUserProfile(userId: string) {
     return await withDatabaseUserContext(userId, async () => {
-      return await prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
           id: true,
@@ -26,6 +27,15 @@ export class UserService {
           updatedAt: true,
         },
       });
+
+      if (!user) return null;
+
+      // Decrypt sensitive fields
+      return {
+        ...user,
+        email: EncryptionService.decrypt(user.email),
+        name: user.name ? EncryptionService.decrypt(user.name) : null,
+      };
     });
   }
 
@@ -255,19 +265,37 @@ export async function createUser(userData: {
   email: string;
   name: string;
 }) {
-  return await withDatabaseUserContext(userData.id, async () => {
+  try {
+    // Encrypt sensitive data before storing
+    const encryptedEmail = EncryptionService.encrypt(userData.email);
+    const encryptedName = userData.name
+      ? EncryptionService.encrypt(userData.name)
+      : null;
+
+    // Don't use RLS context when creating a user since they don't exist yet
     return await prisma.user.create({
       data: {
         id: userData.id,
-        email: userData.email,
-        name: userData.name,
+        email: encryptedEmail,
+        name: encryptedName,
         gdprConsentDate: new Date(),
         consentWithdrawn: false,
         isDeleted: false,
         lastLoginAt: new Date(),
       },
     });
-  });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    // If user already exists, try to update their last login
+    if (error instanceof Error && error.message.includes("unique constraint")) {
+      console.log(`User ${userData.id} already exists, updating last login`);
+      return await prisma.user.update({
+        where: { id: userData.id },
+        data: { lastLoginAt: new Date() },
+      });
+    }
+    throw error;
+  }
 }
 
 export async function updateUser(

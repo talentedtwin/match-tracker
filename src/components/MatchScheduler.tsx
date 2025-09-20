@@ -11,6 +11,9 @@ interface MatchSchedulerProps {
     matchType: "league" | "cup";
     notes?: string;
     selectedPlayerIds: string[];
+    isFinished?: boolean;
+    goalsFor?: number;
+    goalsAgainst?: number;
   }) => void;
   players: Player[];
 }
@@ -25,6 +28,9 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
   const [matchType, setMatchType] = useState<"league" | "cup">("league");
   const [notes, setNotes] = useState("");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [isFinished, setIsFinished] = useState(false);
+  const [goalsFor, setGoalsFor] = useState<number | "">("");
+  const [goalsAgainst, setGoalsAgainst] = useState<number | "">("");
   const [errors, setErrors] = useState<string[]>([]);
 
   const validateAndSchedule = () => {
@@ -48,9 +54,21 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
       validationErrors.push("Please select at least one player for this match");
     }
 
-    // Check if date is in the future
-    if (date && new Date(date) < new Date()) {
-      validationErrors.push("Match date must be in the future");
+    // Check if date is in the future for scheduled matches
+    if (date && new Date(date) < new Date() && !isFinished) {
+      validationErrors.push(
+        "Match date must be in the future for scheduled matches"
+      );
+    }
+
+    // Validate goals for finished matches
+    if (isFinished) {
+      if (goalsFor === "" || goalsFor < 0) {
+        validationErrors.push("Please enter valid goals scored (0 or more)");
+      }
+      if (goalsAgainst === "" || goalsAgainst < 0) {
+        validationErrors.push("Please enter valid goals conceded (0 or more)");
+      }
     }
 
     setErrors(validationErrors);
@@ -62,6 +80,9 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
         matchType,
         notes: notes.trim() || undefined,
         selectedPlayerIds: selectedPlayers,
+        isFinished,
+        goalsFor: isFinished ? Number(goalsFor) : undefined,
+        goalsAgainst: isFinished ? Number(goalsAgainst) : undefined,
       });
 
       // Reset form
@@ -70,6 +91,9 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
       setMatchType("league");
       setNotes("");
       setSelectedPlayers([]);
+      setIsFinished(false);
+      setGoalsFor("");
+      setGoalsAgainst("");
       setErrors([]);
       setIsOpen(false);
     }
@@ -92,6 +116,10 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
   };
 
   const getMinDate = () => {
+    if (isFinished) {
+      // Allow any past date for historic matches
+      return "2020-01-01";
+    }
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split("T")[0];
@@ -105,7 +133,7 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
           className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors"
         >
           <Plus className="w-5 h-5" />
-          Schedule New Match
+          Add Match
         </button>
       </div>
     );
@@ -116,7 +144,7 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-800 flex items-center">
           <Calendar className="w-5 h-5 mr-2 text-blue-500" />
-          Schedule New Match
+          Add Match
         </h2>
         <button
           onClick={() => setIsOpen(false)}
@@ -207,6 +235,77 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
           </div>
         </div>
 
+        {/* Match Status */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Match Status
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center text-gray-700">
+              <input
+                type="radio"
+                value="scheduled"
+                checked={!isFinished}
+                onChange={() => setIsFinished(false)}
+                className="mr-2"
+              />
+              <Calendar className="w-4 h-4 mr-1 text-blue-500" />
+              Scheduled Match
+            </label>
+            <label className="flex items-center text-gray-700">
+              <input
+                type="radio"
+                value="finished"
+                checked={isFinished}
+                onChange={() => setIsFinished(true)}
+                className="mr-2"
+              />
+              <Target className="w-4 h-4 mr-1 text-green-500" />
+              Historic Match (Finished)
+            </label>
+          </div>
+        </div>
+
+        {/* Goals (only show for finished matches) */}
+        {isFinished && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Goals Scored
+              </label>
+              <input
+                type="number"
+                value={goalsFor}
+                onChange={(e) =>
+                  setGoalsFor(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
+                placeholder="0"
+                min="0"
+                className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Goals Conceded
+              </label>
+              <input
+                type="number"
+                value={goalsAgainst}
+                onChange={(e) =>
+                  setGoalsAgainst(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
+                placeholder="0"
+                min="0"
+                className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Notes */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -282,10 +381,23 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
         <div className="flex gap-3 pt-4">
           <button
             onClick={validateAndSchedule}
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-white ${
+              isFinished
+                ? "bg-green-500 hover:bg-green-600"
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
-            <Calendar className="w-4 h-4" />
-            Schedule Match
+            {isFinished ? (
+              <>
+                <Target className="w-4 h-4" />
+                Add Historic Match
+              </>
+            ) : (
+              <>
+                <Calendar className="w-4 h-4" />
+                Schedule Match
+              </>
+            )}
           </button>
           <button
             onClick={() => setIsOpen(false)}

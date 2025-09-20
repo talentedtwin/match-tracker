@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { useMatches } from "../../hooks/useApi";
+import { useMatches, useTeams } from "../../hooks/useApi";
 import MatchHistory from "../../components/MatchHistory";
+import CreateTeamPrompt from "../../components/CreateTeamPrompt";
 import { MatchHistorySkeleton } from "../../components/Skeleton";
 
 const HistoryPage = () => {
@@ -13,8 +14,10 @@ const HistoryPage = () => {
     error: matchesError,
   } = useMatches();
 
+  const { teams, loading: teamsLoading, error: teamsError } = useTeams();
+
   // Show loading state
-  if (matchesLoading) {
+  if (matchesLoading || teamsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
         <MatchHistorySkeleton />
@@ -23,14 +26,37 @@ const HistoryPage = () => {
   }
 
   // Show error state
-  if (matchesError) {
+  if (matchesError || teamsError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h2 className="text-red-800 font-semibold">Error</h2>
-            <p className="text-red-700">{matchesError}</p>
+            <p className="text-red-700">{matchesError || teamsError}</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show create team prompt if no teams exist
+  if (!teams || teams.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
+              📊 Match History
+            </h1>
+            <p className="text-center text-gray-600">
+              Track your team&apos;s performance over time
+            </p>
+          </div>
+
+          <CreateTeamPrompt
+            title="No Team Found"
+            message="Create a team first to start tracking match history and see your performance over time."
+          />
         </div>
       </div>
     );

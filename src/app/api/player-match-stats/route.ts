@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { withDatabaseUserContext } from "@/lib/db-utils";
+import { ensureUserExists } from "@/lib/user-utils";
 
 // GET /api/player-match-stats - Get all player match stats for authenticated user
 export async function GET(request: NextRequest) {
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Ensure user exists in database
+    await ensureUserExists(userId);
 
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get("matchId");
@@ -58,6 +62,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Ensure user exists in database
+    await ensureUserExists(userId);
 
     const body = await request.json();
     const { playerId, matchId, goals, assists } = body;

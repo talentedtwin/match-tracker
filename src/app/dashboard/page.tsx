@@ -9,8 +9,9 @@ import TeamScore from "../../components/TeamScore";
 import StatsSummary from "../../components/StatsSummary";
 import PlayerStats from "../../components/PlayerStats";
 import OfflineStatus from "../../components/OfflineStatus";
+import CreateTeamPrompt from "../../components/CreateTeamPrompt";
 import { DashboardSkeleton } from "../../components/Skeleton";
-import { usePlayers, useMatches } from "../../hooks/useApi";
+import { usePlayers, useMatches, useTeams } from "../../hooks/useApi";
 import { useOffline } from "../../hooks/useOffline";
 import { Player, ScheduledMatch } from "../../types";
 
@@ -31,6 +32,8 @@ const FootballTracker = () => {
     removeMatch,
     refetch: refetchMatches,
   } = useMatches();
+
+  const { teams, loading: teamsLoading, error: teamsError } = useTeams();
 
   // Offline functionality
   const {
@@ -254,16 +257,19 @@ const FootballTracker = () => {
     matchType: "league" | "cup";
     notes?: string;
     selectedPlayerIds: string[];
+    isFinished?: boolean;
+    goalsFor?: number;
+    goalsAgainst?: number;
   }) => {
     try {
       await addMatch({
         ...matchData,
-        isFinished: false,
-        goalsFor: 0,
-        goalsAgainst: 0,
+        isFinished: matchData.isFinished || false,
+        goalsFor: matchData.goalsFor || 0,
+        goalsAgainst: matchData.goalsAgainst || 0,
       });
     } catch (error) {
-      console.error("Failed to schedule match:", error);
+      console.error("Failed to add match:", error);
     }
   };
 
@@ -339,7 +345,7 @@ const FootballTracker = () => {
   }, [matches]);
 
   // Show loading state
-  if (playersLoading || matchesLoading) {
+  if (playersLoading || matchesLoading || teamsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
         <DashboardSkeleton />
@@ -348,14 +354,39 @@ const FootballTracker = () => {
   }
 
   // Show error state
-  if (playersError || matchesError) {
+  if (playersError || matchesError || teamsError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h2 className="text-red-800 font-semibold">Error</h2>
-            <p className="text-red-700">{playersError || matchesError}</p>
+            <p className="text-red-700">
+              {playersError || matchesError || teamsError}
+            </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show create team prompt if no teams exist
+  if (!teams || teams.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
+              ⚽ Football Tracker Dashboard
+            </h1>
+            <p className="text-center text-gray-600">
+              Welcome! Let&apos;s get you started
+            </p>
+          </div>
+
+          <CreateTeamPrompt
+            title="Welcome to Football Tracker!"
+            message="Create your first team to start tracking matches, players, and statistics."
+          />
         </div>
       </div>
     );

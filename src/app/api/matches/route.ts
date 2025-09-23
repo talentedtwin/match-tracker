@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { withDatabaseUserContext } from "@/lib/db-utils";
 import { ensureUserExists } from "@/lib/user-utils";
+import { EncryptionService } from "@/lib/encryption";
 
 interface PlayerStatInput {
   playerId: string;
@@ -40,7 +41,21 @@ export async function GET() {
       });
     });
 
-    return NextResponse.json(matches);
+    // Decrypt player names before returning
+    const matchesWithDecryptedNames = matches.map((match) => ({
+      ...match,
+      playerStats: match.playerStats.map((stat) => ({
+        ...stat,
+        player: stat.player
+          ? {
+              ...stat.player,
+              name: EncryptionService.decrypt(stat.player.name),
+            }
+          : null,
+      })),
+    }));
+
+    return NextResponse.json(matchesWithDecryptedNames);
   } catch (error) {
     console.error("Error fetching matches:", error);
     return NextResponse.json(
@@ -118,7 +133,21 @@ export async function POST(request: NextRequest) {
       return match;
     });
 
-    return NextResponse.json(newMatch, { status: 201 });
+    // Decrypt player names before returning
+    const matchWithDecryptedNames = {
+      ...newMatch,
+      playerStats: newMatch.playerStats.map((stat) => ({
+        ...stat,
+        player: stat.player
+          ? {
+              ...stat.player,
+              name: EncryptionService.decrypt(stat.player.name),
+            }
+          : null,
+      })),
+    };
+
+    return NextResponse.json(matchWithDecryptedNames, { status: 201 });
   } catch (error) {
     console.error("Error creating match:", error);
     return NextResponse.json(

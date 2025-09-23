@@ -38,7 +38,7 @@ export class PlayerService {
   }
 
   /**
-   * Get all players for a user with decrypted names
+   * Get all players for a user with decrypted names and calculated stats
    */
   static async getPlayersForUser(userId: string): Promise<EncryptedPlayer[]> {
     const players = await prisma.player.findMany({
@@ -46,19 +46,41 @@ export class PlayerService {
         userId,
         isDeleted: false,
       },
+      include: {
+        matchStats: {
+          select: {
+            goals: true,
+            assists: true,
+          },
+        },
+      },
       orderBy: {
         name: "asc",
       },
     });
 
-    return players.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-    }));
+    return players.map((player) => {
+      // Calculate total stats from match statistics
+      const totalGoals = player.matchStats.reduce(
+        (sum, stat) => sum + stat.goals,
+        0
+      );
+      const totalAssists = player.matchStats.reduce(
+        (sum, stat) => sum + stat.assists,
+        0
+      );
+
+      return {
+        ...player,
+        name: this.decryptPlayerName(player.name),
+        goals: totalGoals,
+        assists: totalAssists,
+      };
+    });
   }
 
   /**
-   * Get a single player with decrypted name
+   * Get a single player with decrypted name and calculated stats
    */
   static async getPlayer(playerId: string): Promise<EncryptedPlayer | null> {
     const player = await prisma.player.findUnique({
@@ -66,13 +88,33 @@ export class PlayerService {
         id: playerId,
         isDeleted: false,
       },
+      include: {
+        matchStats: {
+          select: {
+            goals: true,
+            assists: true,
+          },
+        },
+      },
     });
 
     if (!player) return null;
 
+    // Calculate total stats from match statistics
+    const totalGoals = player.matchStats.reduce(
+      (sum, stat) => sum + stat.goals,
+      0
+    );
+    const totalAssists = player.matchStats.reduce(
+      (sum, stat) => sum + stat.assists,
+      0
+    );
+
     return {
       ...player,
       name: this.decryptPlayerName(player.name),
+      goals: totalGoals,
+      assists: totalAssists,
     };
   }
 

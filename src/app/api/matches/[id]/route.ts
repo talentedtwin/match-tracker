@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { EncryptionService } from "@/lib/encryption";
 
 interface PlayerStatInput {
   playerId: string;
@@ -29,7 +30,21 @@ export async function GET(
       return NextResponse.json({ error: "Match not found" }, { status: 404 });
     }
 
-    return NextResponse.json(match);
+    // Decrypt player names before returning
+    const matchWithDecryptedNames = {
+      ...match,
+      playerStats: match.playerStats.map((stat) => ({
+        ...stat,
+        player: stat.player
+          ? {
+              ...stat.player,
+              name: EncryptionService.decrypt(stat.player.name),
+            }
+          : null,
+      })),
+    };
+
+    return NextResponse.json(matchWithDecryptedNames);
   } catch (error) {
     console.error("Error fetching match:", error);
     return NextResponse.json(
@@ -90,7 +105,21 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(match);
+    // Decrypt player names before returning
+    const matchWithDecryptedNames = {
+      ...match,
+      playerStats: match.playerStats.map((stat) => ({
+        ...stat,
+        player: stat.player
+          ? {
+              ...stat.player,
+              name: EncryptionService.decrypt(stat.player.name),
+            }
+          : null,
+      })),
+    };
+
+    return NextResponse.json(matchWithDecryptedNames);
   } catch (error) {
     console.error("Error updating match:", error);
     if (

@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { usePlayers, useTeams } from "../../hooks/useApi";
-import TeamManagement from "../../components/TeamManagement";
 import { PlayerManagementSkeleton } from "../../components/Skeleton";
 import { Users, Crown, Target, Trophy } from "lucide-react";
+
+// Lazy load the heavy TeamManagement component
+const TeamManagement = lazy(() => import("../../components/TeamManagement"));
 
 const TeamManagementPage = () => {
   const {
@@ -171,17 +173,19 @@ const TeamManagementPage = () => {
         </div>
 
         {/* Team Management Component */}
-        <TeamManagement
-          teams={teams}
-          players={players}
-          isPremium={isPremium}
-          onAddTeam={handleAddTeam}
-          onUpdateTeam={handleUpdateTeam}
-          onRemoveTeam={handleRemoveTeam}
-          onAddPlayer={handleAddPlayer}
-          onRemovePlayer={handleRemovePlayer}
-          onAssignPlayerToTeam={handleAssignPlayerToTeam}
-        />
+        <Suspense fallback={<PlayerManagementSkeleton />}>
+          <TeamManagement
+            teams={teams}
+            players={players}
+            isPremium={isPremium}
+            onAddTeam={handleAddTeam}
+            onUpdateTeam={handleUpdateTeam}
+            onRemoveTeam={handleRemoveTeam}
+            onAddPlayer={handleAddPlayer}
+            onRemovePlayer={handleRemovePlayer}
+            onAssignPlayerToTeam={handleAssignPlayerToTeam}
+          />
+        </Suspense>
       </div>
     </div>
   );

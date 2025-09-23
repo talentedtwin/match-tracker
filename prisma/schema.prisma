@@ -31,6 +31,7 @@ model User {
   players Player[]
   matches Match[]
 
+  @@index([isDeleted]) // Fast filtering for active users
   @@map("users")
 }
 
@@ -48,6 +49,7 @@ model Team {
   players   Player[]
   matches   Match[]
 
+  @@index([userId, isDeleted]) // Composite index for user's active teams
   @@map("teams")
 }
 
@@ -68,6 +70,8 @@ model Player {
   team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   matchStats PlayerMatchStat[]
 
+  @@index([userId, isDeleted]) // Composite index for user's active players
+  @@index([teamId]) // Fast team-based queries
   @@map("players")
 }
 
@@ -91,6 +95,8 @@ model Match {
   team         Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
   playerStats  PlayerMatchStat[]
 
+  @@index([userId, isFinished]) // Fast filtering for user's matches by status
+  @@index([date]) // Fast date-based sorting
   @@map("matches")
 }
 
@@ -106,5 +112,7 @@ model PlayerMatchStat {
   match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, matchId])
+  @@index([playerId]) // Fast aggregation queries for player stats
+  @@index([matchId]) // Fast match-based queries
   @@map("player_match_stats")
 }

@@ -1,19 +1,33 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  Suspense,
+  lazy,
+} from "react";
 import MatchSetup from "../../components/MatchSetup";
-import MatchScheduler from "../../components/MatchScheduler";
-import ScheduledMatches from "../../components/ScheduledMatches";
 import CurrentMatchHeader from "../../components/CurrentMatchHeader";
 import TeamScore from "../../components/TeamScore";
 import StatsSummary from "../../components/StatsSummary";
 import PlayerStats from "../../components/PlayerStats";
 import OfflineStatus from "../../components/OfflineStatus";
 import CreateTeamPrompt from "../../components/CreateTeamPrompt";
-import { DashboardSkeleton } from "../../components/Skeleton";
+import {
+  DashboardSkeleton,
+  MatchSchedulerSkeleton,
+} from "../../components/Skeleton";
 import { usePlayers, useMatches, useTeams } from "../../hooks/useApi";
 import { useOffline } from "../../hooks/useOffline";
 import { Player, ScheduledMatch } from "../../types";
+
+// Lazy load heavy components
+const MatchScheduler = lazy(() => import("../../components/MatchScheduler"));
+const ScheduledMatches = lazy(
+  () => import("../../components/ScheduledMatches")
+);
 
 const FootballTracker = () => {
   // API-based state management
@@ -416,21 +430,25 @@ const FootballTracker = () => {
 
         {/* Match Scheduler - only show when no current match */}
         {!currentMatch && (
-          <MatchScheduler
-            onScheduleMatch={handleScheduleMatch}
-            players={players}
-          />
+          <Suspense fallback={<MatchSchedulerSkeleton />}>
+            <MatchScheduler
+              onScheduleMatch={handleScheduleMatch}
+              players={players}
+            />
+          </Suspense>
         )}
 
         {/* Scheduled Matches - only show when no current match */}
         {!currentMatch && scheduledMatches.length > 0 && (
-          <ScheduledMatches
-            scheduledMatches={scheduledMatches}
-            players={players}
-            onStartMatch={handleStartScheduledMatch}
-            onDeleteMatch={handleDeleteScheduledMatch}
-            onEditMatch={handleEditScheduledMatch}
-          />
+          <Suspense fallback={<MatchSchedulerSkeleton />}>
+            <ScheduledMatches
+              scheduledMatches={scheduledMatches}
+              players={players}
+              onStartMatch={handleStartScheduledMatch}
+              onDeleteMatch={handleDeleteScheduledMatch}
+              onEditMatch={handleEditScheduledMatch}
+            />
+          </Suspense>
         )}
 
         {/* Current Match or Match Setup */}

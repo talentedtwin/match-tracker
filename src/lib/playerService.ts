@@ -41,42 +41,29 @@ export class PlayerService {
    * Get all players for a user with decrypted names and calculated stats
    */
   static async getPlayersForUser(userId: string): Promise<EncryptedPlayer[]> {
-    const players = await prisma.player.findMany({
-      where: {
-        userId,
-        isDeleted: false,
-      },
-      include: {
-        matchStats: {
-          select: {
-            goals: true,
-            assists: true,
-          },
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    // Use raw SQL for better performance with aggregation
+    const playersWithStats = await prisma.$queryRaw<
+      (EncryptedPlayer & { totalGoals: bigint; totalAssists: bigint })[]
+    >`
+      SELECT 
+        p.*,
+        COALESCE(SUM(pms.goals), 0)::bigint as "totalGoals",
+        COALESCE(SUM(pms.assists), 0)::bigint as "totalAssists"
+      FROM players p
+      LEFT JOIN player_match_stats pms ON p.id = pms."playerId"
+      WHERE p."userId" = ${userId} AND p."isDeleted" = false
+      GROUP BY p.id
+      ORDER BY p.name ASC
+    `;
 
-    return players.map((player) => {
-      // Calculate total stats from match statistics
-      const totalGoals = player.matchStats.reduce(
-        (sum, stat) => sum + stat.goals,
-        0
-      );
-      const totalAssists = player.matchStats.reduce(
-        (sum, stat) => sum + stat.assists,
-        0
-      );
-
-      return {
-        ...player,
-        name: this.decryptPlayerName(player.name),
-        goals: totalGoals,
-        assists: totalAssists,
-      };
-    });
+    return playersWithStats.map((player) => ({
+      ...player,
+      name: this.decryptPlayerName(player.name),
+      goals: Number(player.totalGoals),
+      assists: Number(player.totalAssists),
+      totalGoals: undefined,
+      totalAssists: undefined,
+    }));
   }
 
   /**

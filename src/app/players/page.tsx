@@ -2,6 +2,7 @@
 
 import React, { Suspense, lazy } from "react";
 import { usePlayers, useTeams } from "../../hooks/useApi";
+import { useAuthSync } from "../../hooks/useAuthSync";
 import { PlayerManagementSkeleton } from "../../components/Skeleton";
 import { Users, Crown, Target, Trophy } from "lucide-react";
 
@@ -9,6 +10,15 @@ import { Users, Crown, Target, Trophy } from "lucide-react";
 const TeamManagement = lazy(() => import("../../components/TeamManagement"));
 
 const TeamManagementPage = () => {
+  // Auth sync for fresh data on login
+  useAuthSync({
+    onLogin: () => {
+      console.log("🔄 Login detected - refreshing team management data");
+      // Data will be refreshed automatically by SWR with new cache-busting
+    },
+    preserveMatchState: true,
+  });
+
   const {
     players,
     loading: playersLoading,

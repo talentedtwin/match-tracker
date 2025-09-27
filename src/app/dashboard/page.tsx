@@ -21,6 +21,7 @@ import {
 } from "../../components/Skeleton";
 import { usePlayers, useMatches, useTeams } from "../../hooks/useApi";
 import { useOffline } from "../../hooks/useOffline";
+import { useAuthSync } from "../../hooks/useAuthSync";
 import { Player, ScheduledMatch } from "../../types";
 
 // Lazy load heavy components
@@ -30,6 +31,17 @@ const ScheduledMatches = lazy(
 );
 
 const FootballTracker = () => {
+  // Auth sync for fresh data on login
+  const { isAuthenticated } = useAuthSync({
+    onLogin: () => {
+      console.log("🔄 Login detected - refreshing dashboard data");
+      // Force refresh all data after login
+      refetchMatches();
+      // Note: usePlayers/useTeams don't have refetch, but SWR will handle it
+    },
+    preserveMatchState: true, // Don't clear ongoing matches
+  });
+
   // API-based state management
   const {
     players,

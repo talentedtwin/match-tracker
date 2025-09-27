@@ -3,11 +3,20 @@
 import React from "react";
 import Link from "next/link";
 import { useMatches, useTeams } from "../../hooks/useApi";
+import { useAuthSync } from "../../hooks/useAuthSync";
 import MatchHistory from "../../components/MatchHistory";
 import CreateTeamPrompt from "../../components/CreateTeamPrompt";
 import { MatchHistorySkeleton } from "../../components/Skeleton";
 
 const HistoryPage = () => {
+  // Auth sync for fresh data on login
+  useAuthSync({
+    onLogin: () => {
+      console.log("🔄 Login detected - refreshing match history data");
+    },
+    preserveMatchState: true,
+  });
+
   const {
     matches,
     loading: matchesLoading,

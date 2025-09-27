@@ -252,7 +252,77 @@ class OfflineStorageManager {
     return { success: successCount, failed: failedCount };
   }
 
-  // Sync a single match
+  // Sync all pending matches using batch API
+  async syncPendingMatchesBatch(): Promise<{
+    success: number;
+    failed: number;
+  }> {
+    if (this.syncInProgress) {
+      console.log("🔄 Sync already in progress...");
+      return { success: 0, failed: 0 };
+    }
+
+    this.syncInProgress = true;
+    const pendingMatches = this.getPendingMatches();
+
+    if (pendingMatches.length === 0) {
+      this.syncInProgress = false;
+      return { success: 0, failed: 0 };
+    }
+
+    try {
+      // Convert to sync operations format
+      const operations = pendingMatches.map((pending) => ({
+        id: pending.id,
+        type: pending.operation === "create" ? "match-create" : "match-update",
+        data: pending.data,
+        timestamp: pending.timestamp,
+      }));
+
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operations }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+
+        // Remove successfully synced matches
+        result.results.forEach((res: { id: string; success: boolean }) => {
+          if (res.success) {
+            this.removePendingMatch(res.id);
+          }
+        });
+
+        // Update last sync timestamp
+        localStorage.setItem(
+          this.STORAGE_KEYS.LAST_SYNC,
+          Date.now().toString()
+        );
+
+        console.log(
+          `✅ Batch sync completed: ${result.results.length} operations processed`
+        );
+
+        return {
+          success: result.results.filter((r: { success: boolean }) => r.success)
+            .length,
+          failed: result.errors.length,
+        };
+      } else {
+        console.error("Batch sync failed:", response.statusText);
+        return { success: 0, failed: pendingMatches.length };
+      }
+    } catch (error) {
+      console.error("Batch sync error:", error);
+      return { success: 0, failed: pendingMatches.length };
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  // Sync a single match (fallback method)
   private async syncSingleMatch(pending: PendingMatch): Promise<boolean> {
     try {
       const url =

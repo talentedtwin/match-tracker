@@ -32,7 +32,7 @@ const ScheduledMatches = lazy(
 
 const FootballTracker = () => {
   // Auth sync for fresh data on login
-  const { isAuthenticated } = useAuthSync({
+  useAuthSync({
     onLogin: () => {
       console.log("🔄 Login detected - refreshing dashboard data");
       // Force refresh all data after login

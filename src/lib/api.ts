@@ -2,6 +2,45 @@
 
 const API_BASE = "/api";
 
+// Helper function to add cache-busting parameters
+const addCacheBusting = (url: string): string => {
+  const loginTime = localStorage.getItem("lastLoginTime");
+  if (!loginTime) return url;
+
+  const timeSinceLogin = Date.now() - parseInt(loginTime);
+  // Only add cache-busting for 5 minutes after login
+  if (timeSinceLogin > 5 * 60 * 1000) return url;
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}_t=${loginTime}&_cb=${Date.now()}`;
+};
+
+// Enhanced fetch with cache-busting and error handling
+const apiFetch = async (
+  url: string,
+  options?: RequestInit
+): Promise<Response> => {
+  const cacheBustedUrl = addCacheBusting(url);
+
+  const defaultOptions: RequestInit = {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      ...options?.headers,
+    },
+    ...options,
+  };
+
+  const response = await fetch(cacheBustedUrl, defaultOptions);
+
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+
+  return response;
+};
+
 // Types for API responses
 export interface ApiTeam {
   id: string;
@@ -62,22 +101,15 @@ export interface ApiUser {
 // Player API functions
 export const playerApi = {
   async getAll(): Promise<ApiPlayer[]> {
-    const response = await fetch(`${API_BASE}/players`, {
+    const response = await apiFetch(`${API_BASE}/players`, {
       credentials: "include",
     });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("Authentication required");
-      }
-      throw new Error("Failed to fetch players");
-    }
     return response.json();
   },
 
   async create(name: string, teamId?: string): Promise<ApiPlayer> {
-    const response = await fetch(`${API_BASE}/players`, {
+    const response = await apiFetch(`${API_BASE}/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ name, teamId }),
     });
@@ -121,10 +153,9 @@ export const playerApi = {
 // Match API functions
 export const matchApi = {
   async getAll(): Promise<ApiMatch[]> {
-    const response = await fetch(`${API_BASE}/matches`, {
+    const response = await apiFetch(`${API_BASE}/matches`, {
       credentials: "include",
     });
-    if (!response.ok) throw new Error("Failed to fetch matches");
     return response.json();
   },
 
@@ -258,15 +289,9 @@ export const userApi = {
 // Team API functions
 export const teamApi = {
   async getAll(): Promise<ApiTeam[]> {
-    const response = await fetch(`${API_BASE}/teams`, {
+    const response = await apiFetch(`${API_BASE}/teams`, {
       credentials: "include",
     });
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("Authentication required");
-      }
-      throw new Error("Failed to fetch teams");
-    }
     return response.json();
   },
 

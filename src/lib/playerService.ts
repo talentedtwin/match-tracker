@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma, withRetry } from "./prisma";
 import { EncryptionService } from "./encryption";
 
 export interface EncryptedPlayer {
@@ -41,20 +41,22 @@ export class PlayerService {
    * Get all players for a user with decrypted names and calculated stats
    */
   static async getPlayersForUser(userId: string): Promise<EncryptedPlayer[]> {
-    // Use raw SQL for better performance with aggregation
-    const playersWithStats = await prisma.$queryRaw<
-      (EncryptedPlayer & { totalGoals: bigint; totalAssists: bigint })[]
-    >`
-      SELECT 
-        p.*,
-        COALESCE(SUM(pms.goals), 0)::bigint as "totalGoals",
-        COALESCE(SUM(pms.assists), 0)::bigint as "totalAssists"
-      FROM players p
-      LEFT JOIN player_match_stats pms ON p.id = pms."playerId"
-      WHERE p."userId" = ${userId} AND p."isDeleted" = false
-      GROUP BY p.id
-      ORDER BY p.name ASC
-    `;
+    // Use raw SQL for better performance with aggregation, wrapped in retry logic
+    const playersWithStats = await withRetry(async () => {
+      return await prisma.$queryRaw<
+        (EncryptedPlayer & { totalGoals: bigint; totalAssists: bigint })[]
+      >`
+        SELECT 
+          p.*,
+          COALESCE(SUM(pms.goals), 0)::bigint as "totalGoals",
+          COALESCE(SUM(pms.assists), 0)::bigint as "totalAssists"
+        FROM players p
+        LEFT JOIN player_match_stats pms ON p.id = pms."playerId"
+        WHERE p."userId" = ${userId} AND p."isDeleted" = false
+        GROUP BY p.id
+        ORDER BY p.name ASC
+      `;
+    });
 
     return playersWithStats.map((player) => ({
       ...player,

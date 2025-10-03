@@ -14,9 +14,7 @@ import {
   User,
 } from "lucide-react";
 import { useUser, SignOutButton } from "@clerk/nextjs";
-import PWAInstall from "./PWAInstall";
-import OfflineSync from "./OfflineSync";
-import { useOffline } from "../hooks/useOffline";
+import UnifiedStatusBar from "./UnifiedStatusBar";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -26,7 +24,6 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { user, isLoaded } = useUser();
-  const { isOnline } = useOffline();
 
   const navigationItems = [
     {
@@ -222,9 +219,8 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
       {/* Main Content */}
       <main className="flex-1">{children}</main>
 
-      {/* PWA and Offline Components */}
-      <PWAInstall isOnline={isOnline} />
-      <OfflineSync />
+      {/* Unified Status Bar */}
+      <UnifiedStatusBar />
     </div>
   );
 };

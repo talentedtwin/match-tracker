@@ -1,15 +1,11 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { createUser } from "./userService";
-import { prisma, withRetry, checkDatabaseConnection } from "./prisma";
+import { prisma, withRetry, ensurePrismaConnection } from "./prisma";
 
 export async function ensureUserExists(userId: string): Promise<void> {
   try {
-    // First check if database is reachable
-    const isConnected = await checkDatabaseConnection();
-    if (!isConnected) {
-      console.error("Database connection not available");
-      throw new Error("Database connection failed");
-    }
+    // Ensure Prisma connection is established first
+    await ensurePrismaConnection();
 
     const existingUser = await withRetry(async () => {
       return await prisma.user.findUnique({
@@ -54,7 +50,8 @@ export async function ensureUserExists(userId: string): Promise<void> {
     // If it's a database connection error, provide a more specific message
     if (
       error instanceof Error &&
-      error.message.includes("Can't reach database")
+      (error.message.includes("Can't reach database") ||
+        error.message.includes("Engine is not yet connected"))
     ) {
       throw new Error(
         "Database connection failed. Please check your database configuration."

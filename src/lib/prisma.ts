@@ -7,7 +7,8 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query"] : [],
+    log:
+      process.env.NODE_ENV === "development" ? ["query", "error"] : ["error"],
     datasources: {
       db: {
         url: process.env.DATABASE_URL,
@@ -17,11 +18,27 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+// Ensure connection is established
+let isConnected = false;
+
+export async function ensurePrismaConnection(): Promise<void> {
+  if (!isConnected) {
+    try {
+      await prisma.$connect();
+      isConnected = true;
+      console.log("✅ Prisma connected to database");
+    } catch (error) {
+      console.error("❌ Failed to connect Prisma to database:", error);
+      throw error;
+    }
+  }
+}
+
 // Connection health check function
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    // First try a simple connection test
-    await prisma.$connect();
+    // Ensure connection is established first
+    await ensurePrismaConnection();
 
     // Then try a simple query
     await prisma.$queryRaw`SELECT 1 as test`;
@@ -30,6 +47,9 @@ export async function checkDatabaseConnection(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("❌ Database connection check failed:", error);
+
+    // Reset connection status on failure
+    isConnected = false;
 
     // Try to provide more specific error information
     if (error instanceof Error) {
@@ -43,20 +63,12 @@ export async function checkDatabaseConnection(): Promise<boolean> {
         console.error("🔐 Authentication failed - check credentials");
       } else if (error.message.includes("database does not exist")) {
         console.error("🗄️ Database not found - check database name");
+      } else if (error.message.includes("Engine is not yet connected")) {
+        console.error("🔗 Prisma engine connection issue - will retry");
       }
     }
 
     return false;
-  } finally {
-    // Always disconnect after health check to prevent connection leaks
-    try {
-      await prisma.$disconnect();
-    } catch (disconnectError) {
-      console.warn(
-        "Warning: Failed to disconnect from database:",
-        disconnectError
-      );
-    }
   }
 }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkDatabaseConnection, prisma } from "@/lib/prisma";
+import { checkDatabaseConnection, prisma, ensurePrismaConnection } from "@/lib/prisma";
 
 export async function GET() {
   const startTime = Date.now();
@@ -52,6 +52,9 @@ export async function GET() {
     // Test query if connection is successful
     if (diagnostics.connection.status === "connected") {
       try {
+        // Ensure connection before running query
+        await ensurePrismaConnection();
+        
         const userCount = await prisma.user.count();
         diagnostics.query.status = "success";
         diagnostics.query.userCount = userCount;

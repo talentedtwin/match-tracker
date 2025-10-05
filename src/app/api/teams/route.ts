@@ -1,48 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { dbUtils } from "../../../lib/db-utils";
 import { EncryptionService } from "../../../lib/encryption";
-import { createUser } from "../../../lib/userService";
-import { prisma } from "../../../lib/prisma";
-
-// Helper function to ensure user exists in database
-async function ensureUserExists(userId: string) {
-  const existingUser = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!existingUser) {
-    console.log(`User ${userId} not found, creating...`);
-
-    try {
-      const client = await clerkClient();
-      const clerkUser = await client.users.getUser(userId);
-
-      const primaryEmail = clerkUser.emailAddresses.find(
-        (email: { id: string; emailAddress: string }) =>
-          email.id === clerkUser.primaryEmailAddressId
-      );
-
-      if (!primaryEmail) {
-        throw new Error("No primary email address found");
-      }
-
-      const fullName = [clerkUser.firstName, clerkUser.lastName]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-
-      await createUser({
-        id: userId,
-        email: primaryEmail.emailAddress,
-        name: fullName || "Unknown User",
-      });
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw new Error("Failed to create user profile");
-    }
-  }
-}
+import { ensureUserExists } from "../../../lib/user-utils";
+import { withRetry } from "../../../lib/prisma";
 
 export async function GET() {
   try {
@@ -55,10 +16,12 @@ export async function GET() {
       );
     }
 
-    // Ensure user exists in database
+    // Ensure user exists in database using enhanced connection management
     await ensureUserExists(clerkUserId);
 
-    const teams = await dbUtils.getTeams(clerkUserId);
+    const teams = await withRetry(async () => {
+      return await dbUtils.getTeams(clerkUserId);
+    });
 
     // Decrypt team names
     const decryptedTeams = teams.map((team) => ({
@@ -97,8 +60,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has teams and isn't premium
-    const existingTeams = await dbUtils.getTeams(clerkUserId);
-    const user = await dbUtils.getUser(clerkUserId);
+    const existingTeams = await withRetry(async () => {
+      return await dbUtils.getTeams(clerkUserId);
+    });
+
+    const user = await withRetry(async () => {
+      return await dbUtils.getUser(clerkUserId);
+    });
 
     if (existingTeams.length >= 1 && !user?.isPremium) {
       return NextResponse.json(
@@ -110,9 +78,11 @@ export async function POST(request: NextRequest) {
     // Encrypt the team name
     const encryptedName = EncryptionService.encrypt(name.trim());
 
-    const team = await dbUtils.createTeam({
-      name: encryptedName,
-      userId: clerkUserId,
+    const team = await withRetry(async () => {
+      return await dbUtils.createTeam({
+        name: encryptedName,
+        userId: clerkUserId,
+      });
     });
 
     // Return with decrypted name

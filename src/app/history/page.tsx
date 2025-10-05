@@ -107,7 +107,7 @@ const HistoryPage = () => {
               Start playing matches to see your history here
             </p>
             <Link
-              href="/"
+              href="/dashboard"
               className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
             >
               <svg

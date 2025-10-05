@@ -183,7 +183,6 @@ const MatchSetup: React.FC<MatchSetupProps> = ({
         Total squad: {players.length} player{players.length !== 1 ? "s" : ""} •
         Selected: {selectedPlayers.length} player
         {selectedPlayers.length !== 1 ? "s" : ""}
-        {players.length !== 1 ? "s" : ""}
       </div>
     </div>
   );

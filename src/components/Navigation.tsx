@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   Menu,
   X,
@@ -27,7 +28,7 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
 
   const navigationItems = [
     {
-      href: "/",
+      href: "/dashboard",
       label: "Dashboard",
       icon: Home,
       description: "Main dashboard and current match",
@@ -68,8 +69,13 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2">
-                <span className="text-2xl">⚽</span>
+              <Link href="/dashboard" className="flex items-center space-x-2">
+                <Image
+                  src="/match-tracker.webp"
+                  alt="Match Tracker"
+                  width={64}
+                  height={38}
+                />
                 <span className="text-xl font-bold text-gray-800">
                   Match Tracker
                 </span>

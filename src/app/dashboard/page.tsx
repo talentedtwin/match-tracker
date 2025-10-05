@@ -97,9 +97,16 @@ const FootballTracker = () => {
   // Load offline state on mount
   useEffect(() => {
     const offlineState = loadOfflineState();
-    if (offlineState && offlineState.currentMatch) {
-      setCurrentMatch(offlineState.currentMatch);
-      setTeamScore(offlineState.teamScore);
+    if (offlineState) {
+      // Only restore if there's actually a current match (not null)
+      if (offlineState.currentMatch) {
+        setCurrentMatch(offlineState.currentMatch);
+        setTeamScore(offlineState.teamScore || { for: 0, against: 0 });
+      } else {
+        // Ensure clean state if offline storage has null currentMatch
+        setCurrentMatch(null);
+        setTeamScore({ for: 0, against: 0 });
+      }
     }
   }, [loadOfflineState]);
 
@@ -119,6 +126,13 @@ const FootballTracker = () => {
           playerStats: currentMatch.playerStats,
         },
         teamScore: teamScore,
+        lastSaved: Date.now(),
+      });
+    } else {
+      // Clear offline storage when no current match
+      saveOfflineState({
+        currentMatch: null,
+        teamScore: { for: 0, against: 0 },
         lastSaved: Date.now(),
       });
     }
@@ -231,6 +245,13 @@ const FootballTracker = () => {
         });
 
         // Clear local state immediately to show match is "finished"
+        // Also explicitly clear offline storage
+        saveOfflineState({
+          currentMatch: null,
+          teamScore: { for: 0, against: 0 },
+          lastSaved: Date.now(),
+        });
+
         setCurrentMatch(null);
         setTeamScore({ for: 0, against: 0 });
         return;
@@ -249,6 +270,13 @@ const FootballTracker = () => {
 
       // Trigger a refetch of matches to update the UI
       await refetchMatches();
+
+      // Explicitly clear offline storage before clearing state
+      saveOfflineState({
+        currentMatch: null,
+        teamScore: { for: 0, against: 0 },
+        lastSaved: Date.now(),
+      });
 
       setCurrentMatch(null);
       setTeamScore({ for: 0, against: 0 });
@@ -270,6 +298,13 @@ const FootballTracker = () => {
         });
 
         // Still clear local state to show match is "finished"
+        // Also explicitly clear offline storage
+        saveOfflineState({
+          currentMatch: null,
+          teamScore: { for: 0, against: 0 },
+          lastSaved: Date.now(),
+        });
+
         setCurrentMatch(null);
         setTeamScore({ for: 0, against: 0 });
       }

@@ -28,6 +28,7 @@ export interface OfflineMatchState {
     goalsAgainst: number;
     isFinished: boolean;
     matchType: "league" | "cup";
+    venue: "home" | "away";
     selectedPlayerIds: string[];
     playerStats: Array<{
       playerId: string;

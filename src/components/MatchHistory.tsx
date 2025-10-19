@@ -23,9 +23,12 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
         : "LOSS";
 
     // Create shareable text
+    const teamName = match.team?.name || "Our Team";
+    const venueText = match.venue === "home" ? "🏠 Home" : "✈️ Away";
     let shareText = `🏆 Match Result - ${matchDate}\n\n`;
-    shareText += `📊 ${match.opponent} ${match.goalsAgainst} - ${match.goalsFor} Our Team\n`;
+    shareText += `📊 ${teamName} ${match.goalsFor} - ${match.goalsAgainst} ${match.opponent}\n`;
     shareText += `Result: ${result}\n`;
+    shareText += `Venue: ${venueText}\n`;
     shareText += `Competition: ${
       match.matchType.charAt(0).toUpperCase() + match.matchType.slice(1)
     }\n\n`;
@@ -53,7 +56,7 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
     if (navigator.share) {
       navigator
         .share({
-          title: `Match Result vs ${match.opponent}`,
+          title: `Match Result: ${teamName} vs ${match.opponent}`,
           text: shareText,
         })
         .catch((err) => console.log("Error sharing:", err));
@@ -93,9 +96,14 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h3 className="font-medium text-gray-800">
-                    vs {match.opponent}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-gray-800">
+                      {match.team?.name || "Our Team"} vs {match.opponent}
+                    </h3>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      {match.venue === "home" ? "🏠 Home" : "✈️ Away"}
+                    </span>
+                  </div>
                   <p className="text-sm text-gray-600">
                     {formatDateTime(match.date)}
                   </p>
@@ -122,15 +130,16 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
                         ? "DRAW"
                         : "LOSS"}
                     </div>
+
+                    <button
+                      onClick={() => shareMatchResult(match)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-1 mt-2"
+                      title="Share match result"
+                    >
+                      <Share2Icon className="w-4 h-4" />
+                      Share
+                    </button>
                   </div>
-                  <button
-                    onClick={() => shareMatchResult(match)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-1"
-                    title="Share match result"
-                  >
-                    <Share2Icon className="w-4 h-4" />
-                    Share
-                  </button>
                 </div>
               </div>
 

@@ -71,6 +71,7 @@ export interface ApiMatch {
   goalsAgainst: number;
   isFinished: boolean;
   matchType: string;
+  venue?: string;
   notes?: string;
   selectedPlayerIds: string[];
   userId: string;

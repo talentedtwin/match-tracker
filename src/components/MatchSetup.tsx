@@ -5,7 +5,11 @@ import { Player } from "../types";
 import { Users, Play, AlertCircle } from "lucide-react";
 
 interface MatchSetupProps {
-  onStartNewMatch: (opponent: string, selectedPlayers: Player[]) => void;
+  onStartNewMatch: (
+    opponent: string,
+    selectedPlayers: Player[],
+    venue: "home" | "away"
+  ) => void;
   players: Player[];
 }
 
@@ -15,6 +19,7 @@ const MatchSetup: React.FC<MatchSetupProps> = ({
 }) => {
   const [newOpponent, setNewOpponent] = useState("");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [venue, setVenue] = useState<"home" | "away">("home");
   const [errors, setErrors] = useState<string[]>([]);
 
   const validateAndStartMatch = () => {
@@ -40,9 +45,10 @@ const MatchSetup: React.FC<MatchSetupProps> = ({
       const matchPlayers = players.filter((player) =>
         selectedPlayers.includes(player.id)
       );
-      onStartNewMatch(newOpponent.trim(), matchPlayers);
+      onStartNewMatch(newOpponent.trim(), matchPlayers, venue);
       setNewOpponent("");
       setSelectedPlayers([]);
+      setVenue("home");
       setErrors([]);
     }
   };
@@ -106,6 +112,49 @@ const MatchSetup: React.FC<MatchSetupProps> = ({
           }`}
           onKeyPress={(e) => e.key === "Enter" && validateAndStartMatch()}
         />
+      </div>
+
+      {/* Venue Selection */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Match Venue
+        </label>
+        <div className="flex space-x-4">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="radio"
+              name="venue"
+              value="home"
+              checked={venue === "home"}
+              onChange={(e) => setVenue(e.target.value as "home" | "away")}
+              className="mr-2 text-green-500 focus:ring-green-500"
+            />
+            <span
+              className={`text-sm ${
+                venue === "home" ? "font-medium text-gray-800" : "text-gray-600"
+              }`}
+            >
+              🏠 Home
+            </span>
+          </label>
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="radio"
+              name="venue"
+              value="away"
+              checked={venue === "away"}
+              onChange={(e) => setVenue(e.target.value as "home" | "away")}
+              className="mr-2 text-green-500 focus:ring-green-500"
+            />
+            <span
+              className={`text-sm ${
+                venue === "away" ? "font-medium text-gray-800" : "text-gray-600"
+              }`}
+            >
+              ✈️ Away
+            </span>
+          </label>
+        </div>
       </div>
 
       {/* Player Selection */}

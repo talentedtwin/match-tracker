@@ -9,6 +9,7 @@ interface MatchSchedulerProps {
     opponent: string;
     date: string;
     matchType: "league" | "cup";
+    venue: "home" | "away";
     notes?: string;
     selectedPlayerIds: string[];
     isFinished?: boolean;
@@ -31,6 +32,7 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
   const [opponent, setOpponent] = useState("");
   const [date, setDate] = useState("");
   const [matchType, setMatchType] = useState<"league" | "cup">("league");
+  const [venue, setVenue] = useState<"home" | "away">("home");
   const [notes, setNotes] = useState("");
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [isFinished, setIsFinished] = useState(false);
@@ -107,6 +109,7 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
         opponent: opponent.trim(),
         date,
         matchType,
+        venue,
         notes: notes.trim() || undefined,
         selectedPlayerIds: selectedPlayers,
         isFinished,
@@ -119,6 +122,7 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
       setOpponent("");
       setDate("");
       setMatchType("league");
+      setVenue("home");
       setNotes("");
       setSelectedPlayers([]);
       setIsFinished(false);
@@ -298,6 +302,35 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
               />
               <Trophy className="w-4 h-4 mr-1 text-yellow-500" />
               Cup Match
+            </label>
+          </div>
+        </div>
+
+        {/* Venue */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Venue
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center text-gray-700">
+              <input
+                type="radio"
+                value="home"
+                checked={venue === "home"}
+                onChange={(e) => setVenue(e.target.value as "home" | "away")}
+                className="mr-2"
+              />
+              🏠 Home
+            </label>
+            <label className="flex items-center text-gray-700">
+              <input
+                type="radio"
+                value="away"
+                checked={venue === "away"}
+                onChange={(e) => setVenue(e.target.value as "home" | "away")}
+                className="mr-2"
+              />
+              ✈️ Away
             </label>
           </div>
         </div>

@@ -40,10 +40,19 @@ export async function POST(request: Request) {
 
         switch (type) {
           case "match-create":
+            // Get the user's first team to associate with the match
+            const userTeam = await prisma.team.findFirst({
+              where: {
+                userId: userId,
+                isDeleted: false,
+              },
+            });
+
             const newMatch = await prisma.match.create({
               data: {
                 ...data,
                 userId,
+                teamId: userTeam?.id, // Associate with user's team if available
                 createdAt: new Date(timestamp),
               },
             });

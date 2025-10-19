@@ -131,6 +131,7 @@ const HistoryPage = () => {
             matches={matches.map((match) => ({
               ...match,
               matchType: match.matchType as "league" | "cup",
+              venue: (match.venue as "home" | "away") || "home",
               playerStats: match.playerStats.map((stat) => ({
                 playerId: stat.playerId,
                 playerName: stat.player?.name || "Unknown Player",

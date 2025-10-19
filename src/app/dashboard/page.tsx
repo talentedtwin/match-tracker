@@ -83,6 +83,7 @@ const FootballTracker = () => {
     goalsAgainst: number;
     isFinished: boolean;
     matchType: "league" | "cup";
+    venue: "home" | "away";
     selectedPlayerIds: string[];
     playerStats: Array<{
       playerId: string;
@@ -100,7 +101,10 @@ const FootballTracker = () => {
     if (offlineState) {
       // Only restore if there's actually a current match (not null)
       if (offlineState.currentMatch) {
-        setCurrentMatch(offlineState.currentMatch);
+        setCurrentMatch({
+          ...offlineState.currentMatch,
+          venue: "home", // Default to home for existing matches
+        });
         setTeamScore(offlineState.teamScore || { for: 0, against: 0 });
       } else {
         // Ensure clean state if offline storage has null currentMatch
@@ -122,6 +126,7 @@ const FootballTracker = () => {
           goalsAgainst: teamScore.against,
           isFinished: currentMatch.isFinished,
           matchType: currentMatch.matchType,
+          venue: currentMatch.venue,
           selectedPlayerIds: currentMatch.selectedPlayerIds,
           playerStats: currentMatch.playerStats,
         },
@@ -185,7 +190,8 @@ const FootballTracker = () => {
   // Handle starting a new match
   const handleStartNewMatch = async (
     opponent: string,
-    selectedPlayers: Player[]
+    selectedPlayers: Player[],
+    venue: "home" | "away"
   ) => {
     if (selectedPlayers.length === 0) {
       alert("Please select at least one player for this match");
@@ -201,6 +207,7 @@ const FootballTracker = () => {
       goalsAgainst: 0,
       isFinished: false,
       matchType: "league" as const,
+      venue,
       selectedPlayerIds: selectedPlayers.map((p) => p.id),
       playerStats: selectedPlayers.map((player) => ({
         playerId: player.id,
@@ -354,6 +361,7 @@ const FootballTracker = () => {
       goalsAgainst: 0,
       isFinished: false,
       matchType: scheduledMatch.matchType,
+      venue: scheduledMatch.venue,
       selectedPlayerIds: scheduledMatch.selectedPlayerIds,
       playerStats: selectedPlayers.map((player) => ({
         playerId: player.id,
@@ -403,6 +411,7 @@ const FootballTracker = () => {
         opponent: match.opponent,
         date: match.date,
         matchType: match.matchType as "league" | "cup",
+        venue: (match.venue as "home" | "away") || "home",
         notes: match.notes,
         selectedPlayerIds: match.selectedPlayerIds || [],
         isFinished: match.isFinished,
@@ -529,6 +538,7 @@ const FootballTracker = () => {
           matches={matches.map((match) => ({
             ...match,
             matchType: match.matchType as "league" | "cup",
+            venue: (match.venue as "home" | "away") || "home",
             playerStats: match.playerStats.map((stat) => ({
               playerId: stat.playerId,
               playerName: stat.player?.name || "Unknown Player",

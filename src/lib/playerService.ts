@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma, withRetry } from "./prisma";
 import { EncryptionService } from "./encryption";
 
 export interface EncryptedPlayer {
@@ -41,29 +41,59 @@ export class PlayerService {
    * Get all players for a user with decrypted names and calculated stats
    */
   static async getPlayersForUser(userId: string): Promise<EncryptedPlayer[]> {
-    // Use raw SQL for better performance with aggregation
-    const playersWithStats = await prisma.$queryRaw<
-      (EncryptedPlayer & { totalGoals: bigint; totalAssists: bigint })[]
-    >`
-      SELECT 
-        p.*,
-        COALESCE(SUM(pms.goals), 0)::bigint as "totalGoals",
-        COALESCE(SUM(pms.assists), 0)::bigint as "totalAssists"
-      FROM players p
-      LEFT JOIN player_match_stats pms ON p.id = pms."playerId"
-      WHERE p."userId" = ${userId} AND p."isDeleted" = false
-      GROUP BY p.id
-      ORDER BY p.name ASC
-    `;
+    // Use raw SQL for better performance with aggregation, wrapped in retry logic
+    const playersWithStats = await withRetry(async () => {
+      return await prisma.$queryRaw<
+        Array<{
+          id: string;
+          name: string;
+          goals: number;
+          assists: number;
+          createdAt: Date;
+          updatedAt: Date;
+          userId: string;
+          teamId: string | null;
+          isDeleted: boolean;
+          deletedAt: Date | null;
+          totalGoals: bigint;
+          totalAssists: bigint;
+        }>
+      >`
+        SELECT 
+          p.*,
+          COALESCE(SUM(pms.goals), 0)::bigint as "totalGoals",
+          COALESCE(SUM(pms.assists), 0)::bigint as "totalAssists"
+        FROM players p
+        LEFT JOIN player_match_stats pms ON p.id = pms."playerId"
+        WHERE p."userId" = ${userId} AND p."isDeleted" = false
+        GROUP BY p.id
+        ORDER BY p.name ASC
+      `;
+    });
 
-    return playersWithStats.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-      goals: Number(player.totalGoals),
-      assists: Number(player.totalAssists),
-      totalGoals: undefined,
-      totalAssists: undefined,
-    }));
+    return playersWithStats.map(
+      (player: {
+        id: string;
+        name: string;
+        goals: number;
+        assists: number;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        teamId: string | null;
+        totalGoals: bigint;
+        totalAssists: bigint;
+      }) => ({
+        id: player.id,
+        name: this.decryptPlayerName(player.name),
+        goals: Number(player.totalGoals),
+        assists: Number(player.totalAssists),
+        createdAt: player.createdAt,
+        updatedAt: player.updatedAt,
+        userId: player.userId,
+        teamId: player.teamId,
+      })
+    );
   }
 
   /**
@@ -89,11 +119,13 @@ export class PlayerService {
 
     // Calculate total stats from match statistics
     const totalGoals = player.matchStats.reduce(
-      (sum, stat) => sum + stat.goals,
+      (sum: number, stat: { goals: number; assists: number }) =>
+        sum + stat.goals,
       0
     );
     const totalAssists = player.matchStats.reduce(
-      (sum, stat) => sum + stat.assists,
+      (sum: number, stat: { goals: number; assists: number }) =>
+        sum + stat.assists,
       0
     );
 
@@ -205,10 +237,21 @@ export class PlayerService {
       take: limit,
     });
 
-    return players.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-    }));
+    return players.map(
+      (player: {
+        id: string;
+        name: string;
+        goals: number;
+        assists: number;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        teamId: string | null;
+      }) => ({
+        ...player,
+        name: this.decryptPlayerName(player.name),
+      })
+    );
   }
 
   /**
@@ -229,10 +272,21 @@ export class PlayerService {
       take: limit,
     });
 
-    return players.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-    }));
+    return players.map(
+      (player: {
+        id: string;
+        name: string;
+        goals: number;
+        assists: number;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        teamId: string | null;
+      }) => ({
+        ...player,
+        name: this.decryptPlayerName(player.name),
+      })
+    );
   }
 
   /**

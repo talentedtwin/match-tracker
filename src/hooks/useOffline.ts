@@ -53,7 +53,7 @@ export function useOffline(): UseOfflineResult {
     setSyncStatus("syncing");
 
     try {
-      const result = await offlineStorage.syncPendingMatches();
+      const result = await offlineStorage.syncPendingMatchesBatch();
 
       if (result.failed === 0) {
         setSyncStatus("success");

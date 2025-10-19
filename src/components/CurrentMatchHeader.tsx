@@ -17,7 +17,8 @@ const CurrentMatchHeader: React.FC<CurrentMatchHeaderProps> = ({
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800">
-          Current Match vs {currentMatch.opponent}
+          Current Match: {currentMatch.team?.name || "Our Team"} vs{" "}
+          {currentMatch.opponent}
         </h2>
         <button
           onClick={onFinishMatch}

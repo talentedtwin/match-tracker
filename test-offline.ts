@@ -13,6 +13,7 @@ const testMatchState = {
     goalsAgainst: 1,
     isFinished: false,
     matchType: "league" as const,
+    venue: "home" as const,
     selectedPlayerIds: ["player1", "player2"],
     playerStats: [
       {

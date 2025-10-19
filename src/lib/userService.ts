@@ -1,4 +1,4 @@
-import { prisma } from "./prisma";
+import { prisma, ensurePrismaConnection } from "./prisma";
 import { EncryptionService } from "./encryption";
 import {
   withDatabaseUserContext,
@@ -266,6 +266,9 @@ export async function createUser(userData: {
   name: string;
 }) {
   try {
+    // Ensure Prisma connection is established first
+    await ensurePrismaConnection();
+
     // Encrypt sensitive data before storing
     const encryptedEmail = EncryptionService.encrypt(userData.email);
     const encryptedName = userData.name
@@ -289,6 +292,10 @@ export async function createUser(userData: {
     // If user already exists, try to update their last login
     if (error instanceof Error && error.message.includes("unique constraint")) {
       console.log(`User ${userData.id} already exists, updating last login`);
+
+      // Ensure connection for the update as well
+      await ensurePrismaConnection();
+
       return await prisma.user.update({
         where: { id: userData.id },
         data: { lastLoginAt: new Date() },

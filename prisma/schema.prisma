@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -83,6 +82,7 @@ model Match {
   goalsAgainst Int      @default(0)
   isFinished   Boolean  @default(false)
   matchType    String   @default("league") // "league" or "cup"
+  venue        String   @default("home") // "home" or "away"
   notes        String?  // Optional match notes
   selectedPlayerIds String[] @default([]) // Array of player IDs selected for this match
   createdAt    DateTime @default(now())

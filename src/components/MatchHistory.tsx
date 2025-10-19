@@ -101,7 +101,7 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
                       {match.team?.name || "Our Team"} vs {match.opponent}
                     </h3>
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                      {match.venue === "home" ? "🏠 Home" : "✈️ Away"}
+                      {match.venue === "home" ? "🏠" : "✈️"}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">

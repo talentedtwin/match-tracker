@@ -3,6 +3,7 @@
 import React from "react";
 import { Match } from "../types";
 import { formatDateTime } from "../utils/dateUtils";
+import { Share2Icon } from "lucide-react";
 
 interface MatchHistoryProps {
   matches: Match[];
@@ -11,6 +12,65 @@ interface MatchHistoryProps {
 const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
   // Filter to only show finished matches for history
   const finishedMatches = matches.filter((match) => match.isFinished);
+
+  const shareMatchResult = (match: Match) => {
+    const matchDate = formatDateTime(match.date);
+    const result =
+      match.goalsFor > match.goalsAgainst
+        ? "WIN"
+        : match.goalsFor === match.goalsAgainst
+        ? "DRAW"
+        : "LOSS";
+
+    // Create shareable text
+    let shareText = `🏆 Match Result - ${matchDate}\n\n`;
+    shareText += `📊 ${match.opponent} ${match.goalsAgainst} - ${match.goalsFor} Our Team\n`;
+    shareText += `Result: ${result}\n`;
+    shareText += `Competition: ${
+      match.matchType.charAt(0).toUpperCase() + match.matchType.slice(1)
+    }\n\n`;
+
+    if (match.playerStats && match.playerStats.length > 0) {
+      const performingPlayers = match.playerStats.filter(
+        (stat) => stat.goals > 0 || stat.assists > 0
+      );
+      if (performingPlayers.length > 0) {
+        shareText += `👥 Player Performance:\n`;
+        performingPlayers.forEach((player) => {
+          shareText += `• ${player.playerName}: ${player.goals}G, ${player.assists}A\n`;
+        });
+        shareText += "\n";
+      }
+    }
+
+    if (match.notes) {
+      shareText += `📝 Notes: ${match.notes}\n`;
+    }
+
+    shareText += `\n⚽ Shared from Match Tracker`;
+
+    // Try to use Web Share API if available, otherwise copy to clipboard
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `Match Result vs ${match.opponent}`,
+          text: shareText,
+        })
+        .catch((err) => console.log("Error sharing:", err));
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard
+        .writeText(shareText)
+        .then(() => {
+          alert("Match result copied to clipboard!");
+        })
+        .catch((err) => {
+          console.log("Error copying to clipboard:", err);
+          // Final fallback - show the text in an alert
+          alert(`Match result:\n\n${shareText}`);
+        });
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -40,27 +100,37 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
                     {formatDateTime(match.date)}
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold">
-                    <span
-                      className={
-                        match.goalsFor > match.goalsAgainst
-                          ? "text-green-600"
-                          : match.goalsFor === match.goalsAgainst
-                          ? "text-yellow-600"
-                          : "text-red-600"
-                      }
-                    >
-                      {match.goalsFor} - {match.goalsAgainst}
-                    </span>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-lg font-bold">
+                      <span
+                        className={
+                          match.goalsFor > match.goalsAgainst
+                            ? "text-green-600"
+                            : match.goalsFor === match.goalsAgainst
+                            ? "text-yellow-600"
+                            : "text-red-600"
+                        }
+                      >
+                        {match.goalsFor} - {match.goalsAgainst}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {match.goalsFor > match.goalsAgainst
+                        ? "WIN"
+                        : match.goalsFor === match.goalsAgainst
+                        ? "DRAW"
+                        : "LOSS"}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {match.goalsFor > match.goalsAgainst
-                      ? "WIN"
-                      : match.goalsFor === match.goalsAgainst
-                      ? "DRAW"
-                      : "LOSS"}
-                  </div>
+                  <button
+                    onClick={() => shareMatchResult(match)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-1"
+                    title="Share match result"
+                  >
+                    <Share2Icon className="w-4 h-4" />
+                    Share
+                  </button>
                 </div>
               </div>
 

@@ -321,6 +321,11 @@ const FootballTracker = () => {
     isFinished?: boolean;
     goalsFor?: number;
     goalsAgainst?: number;
+    playerStats?: Array<{
+      playerId: string;
+      goals?: number;
+      assists?: number;
+    }>;
   }) => {
     try {
       await addMatch({

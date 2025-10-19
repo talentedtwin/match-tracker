@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useUser, SignOutButton } from "@clerk/nextjs";
 import UnifiedStatusBar from "./UnifiedStatusBar";
+import Footer from "./Footer";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -62,9 +63,9 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -224,6 +225,9 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1">{children}</main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Unified Status Bar */}
       <UnifiedStatusBar />

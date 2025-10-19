@@ -69,18 +69,17 @@ export async function POST(request: Request) {
             const { matchId, playerStats } = data;
 
             // Delete existing stats for this match
-            await prisma.playerMatchStats.deleteMany({
+            await prisma.playerMatchStat.deleteMany({
               where: { matchId },
             });
 
             // Create new stats
             const statsPromises = playerStats.map(
               (stats: { playerId: string; goals: number; assists: number }) =>
-                prisma.playerMatchStats.create({
+                prisma.playerMatchStat.create({
                   data: {
                     ...stats,
                     matchId,
-                    createdAt: new Date(timestamp),
                   },
                 })
             );

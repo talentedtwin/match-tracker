@@ -14,6 +14,11 @@ interface MatchSchedulerProps {
     isFinished?: boolean;
     goalsFor?: number;
     goalsAgainst?: number;
+    playerStats?: Array<{
+      playerId: string;
+      goals?: number;
+      assists?: number;
+    }>;
   }) => void;
   players: Player[];
 }
@@ -31,6 +36,9 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
   const [isFinished, setIsFinished] = useState(false);
   const [goalsFor, setGoalsFor] = useState<number | "">("");
   const [goalsAgainst, setGoalsAgainst] = useState<number | "">("");
+  const [playerStats, setPlayerStats] = useState<
+    Record<string, { goals: number; assists: number }>
+  >({});
   const [errors, setErrors] = useState<string[]>([]);
 
   const validateAndSchedule = () => {
@@ -69,11 +77,32 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
       if (goalsAgainst === "" || goalsAgainst < 0) {
         validationErrors.push("Please enter valid goals conceded (0 or more)");
       }
+
+      // Validate player goals don't exceed team total
+      if (selectedPlayers.length > 0 && goalsFor !== "") {
+        const totalPlayerGoals = selectedPlayers.reduce((total, playerId) => {
+          return total + (playerStats[playerId]?.goals || 0);
+        }, 0);
+
+        if (totalPlayerGoals > Number(goalsFor)) {
+          validationErrors.push(
+            `Total player goals (${totalPlayerGoals}) cannot exceed team goals (${goalsFor})`
+          );
+        }
+      }
     }
 
     setErrors(validationErrors);
 
     if (validationErrors.length === 0) {
+      const playerStatsArray = isFinished
+        ? selectedPlayers.map((playerId) => ({
+            playerId,
+            goals: playerStats[playerId]?.goals || 0,
+            assists: playerStats[playerId]?.assists || 0,
+          }))
+        : undefined;
+
       onScheduleMatch({
         opponent: opponent.trim(),
         date,
@@ -83,6 +112,7 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
         isFinished,
         goalsFor: isFinished ? Number(goalsFor) : undefined,
         goalsAgainst: isFinished ? Number(goalsAgainst) : undefined,
+        playerStats: playerStatsArray,
       });
 
       // Reset form
@@ -94,25 +124,62 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
       setIsFinished(false);
       setGoalsFor("");
       setGoalsAgainst("");
+      setPlayerStats({});
       setErrors([]);
       setIsOpen(false);
     }
   };
 
   const togglePlayerSelection = (playerId: string) => {
-    setSelectedPlayers((prev) =>
-      prev.includes(playerId)
+    setSelectedPlayers((prev) => {
+      const newSelection = prev.includes(playerId)
         ? prev.filter((id) => id !== playerId)
-        : [...prev, playerId]
-    );
+        : [...prev, playerId];
+
+      // Initialize or remove player stats based on selection
+      setPlayerStats((prevStats) => {
+        const newStats = { ...prevStats };
+        if (newSelection.includes(playerId) && !prevStats[playerId]) {
+          newStats[playerId] = { goals: 0, assists: 0 };
+        } else if (!newSelection.includes(playerId)) {
+          delete newStats[playerId];
+        }
+        return newStats;
+      });
+
+      return newSelection;
+    });
+  };
+
+  const updatePlayerStats = (
+    playerId: string,
+    field: "goals" | "assists",
+    value: number
+  ) => {
+    setPlayerStats((prev) => ({
+      ...prev,
+      [playerId]: {
+        ...prev[playerId],
+        [field]: Math.max(0, value),
+      },
+    }));
   };
 
   const selectAllPlayers = () => {
-    setSelectedPlayers(players.map((p) => p.id));
+    const allPlayerIds = players.map((p) => p.id);
+    setSelectedPlayers(allPlayerIds);
+
+    // Initialize stats for all players
+    const newStats: Record<string, { goals: number; assists: number }> = {};
+    allPlayerIds.forEach((id) => {
+      newStats[id] = { goals: 0, assists: 0 };
+    });
+    setPlayerStats(newStats);
   };
 
   const clearSelection = () => {
     setSelectedPlayers([]);
+    setPlayerStats({});
   };
 
   const getMinDate = () => {
@@ -374,6 +441,80 @@ const MatchScheduler: React.FC<MatchSchedulerProps> = ({
                 {selectedPlayers.length !== 1 ? "s" : ""} selected
               </div>
             )}
+          </div>
+        )}
+
+        {/* Player Stats (only show for finished matches with selected players) */}
+        {isFinished && selectedPlayers.length > 0 && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+              <Target className="w-4 h-4 mr-2 text-blue-500" />
+              Player Performance
+            </h3>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {selectedPlayers.map((playerId) => {
+                const player = players.find((p) => p.id === playerId);
+                if (!player) return null;
+
+                const stats = playerStats[playerId] || { goals: 0, assists: 0 };
+
+                return (
+                  <div
+                    key={playerId}
+                    className="bg-white rounded-lg p-3 border"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-gray-700">
+                        {player.name}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Goals
+                        </label>
+                        <input
+                          type="number"
+                          value={stats.goals}
+                          onChange={(e) =>
+                            updatePlayerStats(
+                              playerId,
+                              "goals",
+                              Number(e.target.value) || 0
+                            )
+                          }
+                          placeholder="0"
+                          min="0"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Assists
+                        </label>
+                        <input
+                          type="number"
+                          value={stats.assists}
+                          onChange={(e) =>
+                            updatePlayerStats(
+                              playerId,
+                              "assists",
+                              Number(e.target.value) || 0
+                            )
+                          }
+                          placeholder="0"
+                          min="0"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 text-xs text-gray-600">
+              Add individual goals and assists for each player in this match
+            </div>
           </div>
         )}
 

@@ -44,7 +44,20 @@ export class PlayerService {
     // Use raw SQL for better performance with aggregation, wrapped in retry logic
     const playersWithStats = await withRetry(async () => {
       return await prisma.$queryRaw<
-        (EncryptedPlayer & { totalGoals: bigint; totalAssists: bigint })[]
+        Array<{
+          id: string;
+          name: string;
+          goals: number;
+          assists: number;
+          createdAt: Date;
+          updatedAt: Date;
+          userId: string;
+          teamId: string | null;
+          isDeleted: boolean;
+          deletedAt: Date | null;
+          totalGoals: bigint;
+          totalAssists: bigint;
+        }>
       >`
         SELECT 
           p.*,
@@ -58,14 +71,29 @@ export class PlayerService {
       `;
     });
 
-    return playersWithStats.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-      goals: Number(player.totalGoals),
-      assists: Number(player.totalAssists),
-      totalGoals: undefined,
-      totalAssists: undefined,
-    }));
+    return playersWithStats.map(
+      (player: {
+        id: string;
+        name: string;
+        goals: number;
+        assists: number;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        teamId: string | null;
+        totalGoals: bigint;
+        totalAssists: bigint;
+      }) => ({
+        id: player.id,
+        name: this.decryptPlayerName(player.name),
+        goals: Number(player.totalGoals),
+        assists: Number(player.totalAssists),
+        createdAt: player.createdAt,
+        updatedAt: player.updatedAt,
+        userId: player.userId,
+        teamId: player.teamId,
+      })
+    );
   }
 
   /**
@@ -91,11 +119,13 @@ export class PlayerService {
 
     // Calculate total stats from match statistics
     const totalGoals = player.matchStats.reduce(
-      (sum, stat) => sum + stat.goals,
+      (sum: number, stat: { goals: number; assists: number }) =>
+        sum + stat.goals,
       0
     );
     const totalAssists = player.matchStats.reduce(
-      (sum, stat) => sum + stat.assists,
+      (sum: number, stat: { goals: number; assists: number }) =>
+        sum + stat.assists,
       0
     );
 
@@ -207,10 +237,21 @@ export class PlayerService {
       take: limit,
     });
 
-    return players.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-    }));
+    return players.map(
+      (player: {
+        id: string;
+        name: string;
+        goals: number;
+        assists: number;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        teamId: string | null;
+      }) => ({
+        ...player,
+        name: this.decryptPlayerName(player.name),
+      })
+    );
   }
 
   /**
@@ -231,10 +272,21 @@ export class PlayerService {
       take: limit,
     });
 
-    return players.map((player) => ({
-      ...player,
-      name: this.decryptPlayerName(player.name),
-    }));
+    return players.map(
+      (player: {
+        id: string;
+        name: string;
+        goals: number;
+        assists: number;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        teamId: string | null;
+      }) => ({
+        ...player,
+        name: this.decryptPlayerName(player.name),
+      })
+    );
   }
 
   /**

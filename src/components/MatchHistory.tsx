@@ -24,7 +24,7 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches }) => {
 
     // Create shareable text
     const teamName = match.team?.name || "Our Team";
-    const venueText = match.venue === "home" ? "🏠 Home" : "✈️ Away";
+    const venueText = match.venue === "home" ? "🏠" : "✈️";
     let shareText = `🏆 Match Result - ${matchDate}\n\n`;
     shareText += `📊 ${teamName} ${match.goalsFor} - ${match.goalsAgainst} ${match.opponent}\n`;
     shareText += `Result: ${result}\n`;

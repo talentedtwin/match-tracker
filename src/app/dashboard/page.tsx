@@ -23,6 +23,7 @@ import { usePlayers, useMatches, useTeams } from "../../hooks/useApi";
 import { useOffline } from "../../hooks/useOffline";
 import { useAuthSync } from "../../hooks/useAuthSync";
 import { Player, ScheduledMatch } from "../../types";
+import { trackMatchEvent } from "../../lib/posthog";
 
 // Lazy load heavy components
 const MatchScheduler = lazy(() => import("../../components/MatchScheduler"));
@@ -250,6 +251,22 @@ const FootballTracker = () => {
       // Trigger a refetch of matches to update the UI
       await refetchMatches();
 
+      // Track match completion
+      trackMatchEvent("match_completed", {
+        matchId: currentMatch.id,
+        opponent: currentMatch.opponent,
+        goalsFor: teamScore.for,
+        goalsAgainst: teamScore.against,
+        result:
+          teamScore.for > teamScore.against
+            ? "win"
+            : teamScore.for === teamScore.against
+            ? "draw"
+            : "loss",
+        matchType: currentMatch.matchType,
+        playerCount: currentMatch.playerStats.length,
+      });
+
       setCurrentMatch(null);
       setTeamScore({ for: 0, against: 0 });
     } catch (error) {
@@ -293,6 +310,14 @@ const FootballTracker = () => {
         isFinished: matchData.isFinished || false,
         goalsFor: matchData.goalsFor || 0,
         goalsAgainst: matchData.goalsAgainst || 0,
+      });
+
+      // Track match scheduling
+      trackMatchEvent("match_scheduled", {
+        opponent: matchData.opponent,
+        matchType: matchData.matchType,
+        isFinished: matchData.isFinished || false,
+        playerCount: matchData.selectedPlayerIds.length,
       });
     } catch (error) {
       console.error("Failed to add match:", error);

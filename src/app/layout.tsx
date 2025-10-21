@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "../components/Navigation";
 import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { PostHogProvider } from "../components/PostHogProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +37,9 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <Navigation>{children}</Navigation>
+          <PostHogProvider>
+            <Navigation>{children}</Navigation>
+          </PostHogProvider>
           <Analytics />
         </body>
       </html>

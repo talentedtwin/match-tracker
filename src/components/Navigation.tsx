@@ -13,7 +13,8 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import { PostHogSignOutButton } from "./PostHogSignOutButton";
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -109,12 +110,12 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
                       {user.firstName || user.emailAddresses[0]?.emailAddress}
                     </span>
                   </div>
-                  <SignOutButton>
+                  <PostHogSignOutButton>
                     <button className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
                       <LogOut className="w-4 h-4" />
                       <span>Logout</span>
                     </button>
-                  </SignOutButton>
+                  </PostHogSignOutButton>
                 </div>
               )}
             </div>
@@ -194,7 +195,7 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
               {/* Logout Button for Mobile */}
               {isLoaded && user && (
                 <div className="border-t border-gray-200 pt-2">
-                  <SignOutButton>
+                  <PostHogSignOutButton>
                     <button
                       className="flex items-center space-x-3 px-3 py-3 w-full text-left rounded-md text-base font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
                       onClick={closeMenu}
@@ -207,7 +208,7 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
                         </div>
                       </div>
                     </button>
-                  </SignOutButton>
+                  </PostHogSignOutButton>
                 </div>
               )}
             </div>

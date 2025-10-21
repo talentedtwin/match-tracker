@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Plus, Users, Edit2, Trash2, Crown, AlertCircle } from "lucide-react";
 import { Team, Player } from "../types";
+import { trackTeamEvent } from "../lib/posthog";
 
 interface TeamManagementProps {
   teams: Team[];
@@ -43,6 +44,10 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
       // Check if user can add more teams
       if (teams.length >= 1 && !isPremium) {
         setShowPremiumWarning(true);
+        trackTeamEvent("team_creation_blocked", {
+          reason: "premium_limit",
+          currentTeamCount: teams.length,
+        });
         return;
       }
 
@@ -50,8 +55,19 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
         await onAddTeam(newTeamName.trim());
         setNewTeamName("");
         setShowPremiumWarning(false);
+
+        // Track successful team creation
+        trackTeamEvent("team_created", {
+          teamName: newTeamName.trim(),
+          isPremiumUser: isPremium,
+          totalTeams: teams.length + 1,
+        });
       } catch (error) {
         console.error("Failed to add team:", error);
+        trackTeamEvent("team_creation_failed", {
+          teamName: newTeamName.trim(),
+          error: error instanceof Error ? error.message : "unknown",
+        });
       }
     }
   };
@@ -65,8 +81,17 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
         );
         setNewPlayerName("");
         setSelectedTeamForPlayer("");
+
+        // Track successful player creation
+        trackTeamEvent("player_created", {
+          hasTeam: Boolean(selectedTeamForPlayer),
+          totalPlayers: players.length + 1,
+        });
       } catch (error) {
         console.error("Failed to add player:", error);
+        trackTeamEvent("player_creation_failed", {
+          error: error instanceof Error ? error.message : "unknown",
+        });
       }
     }
   };

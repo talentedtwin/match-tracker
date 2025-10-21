@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "../components/Navigation";
 import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
+import PWAUpdateNotification from "../components/PWAUpdateNotification";
 import { PostHogProvider } from "../components/PostHogProvider";
 
 const geistSans = Geist({
@@ -16,9 +17,34 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  shrinkToFit: false,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#3b82f6",
+};
+
 export const metadata: Metadata = {
   title: "Match Tracker",
   description: "Track your grassroots football team's performance",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Match Tracker",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "Match Tracker",
+    "application-name": "Match Tracker",
+    "msapplication-TileColor": "#3b82f6",
+    "msapplication-tap-highlight": "no",
+  },
 };
 
 export default function RootLayout({
@@ -34,11 +60,17 @@ export default function RootLayout({
       afterSignUpUrl="/dashboard"
     >
       <html lang="en">
+        <head>
+          <link rel="icon" type="image/svg+xml" href="/icons/favicon.ico" />
+          <link rel="apple-touch-icon" href="/icons/icon-192x192.webp" />
+          <meta name="theme-color" content="#3b82f6" />
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           <PostHogProvider>
             <Navigation>{children}</Navigation>
+            <PWAUpdateNotification />
           </PostHogProvider>
           <Analytics />
         </body>

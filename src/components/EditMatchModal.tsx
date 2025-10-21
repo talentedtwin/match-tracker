@@ -24,6 +24,7 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({
     date: "",
     time: "",
     matchType: "league" as "league" | "cup",
+    venue: "home" as "home" | "away",
     notes: "",
     selectedPlayerIds: [] as string[],
   });
@@ -40,6 +41,7 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({
         date: dateStr,
         time: timeStr,
         matchType: match.matchType as "league" | "cup",
+        venue: match.venue || "home",
         notes: match.notes || "",
         selectedPlayerIds: [...match.selectedPlayerIds],
       });
@@ -59,6 +61,7 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({
       opponent: formData.opponent,
       date: combinedDateTime.toISOString(),
       matchType: formData.matchType,
+      venue: formData.venue,
       notes: formData.notes || undefined,
       selectedPlayerIds: formData.selectedPlayerIds,
     };
@@ -180,6 +183,45 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({
                   className="mr-2 text-gray-700"
                 />
                 Cup Match
+              </label>
+            </div>
+          </div>
+
+          {/* Venue */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Venue
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center text-gray-700">
+                <input
+                  type="radio"
+                  value="home"
+                  checked={formData.venue === "home"}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      venue: e.target.value as "home" | "away",
+                    }))
+                  }
+                  className="mr-2 text-gray-700"
+                />
+                Home
+              </label>
+              <label className="flex items-center text-gray-700">
+                <input
+                  type="radio"
+                  value="away"
+                  checked={formData.venue === "away"}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      venue: e.target.value as "home" | "away",
+                    }))
+                  }
+                  className="mr-2 text-gray-700"
+                />
+                Away
               </label>
             </div>
           </div>

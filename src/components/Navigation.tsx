@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   Menu,
   X,
@@ -14,6 +15,8 @@ import {
   User,
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import UnifiedStatusBar from "./UnifiedStatusBar";
+import Footer from "./Footer";
 import { PostHogSignOutButton } from "./PostHogSignOutButton";
 
 interface NavigationProps {
@@ -27,7 +30,7 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
 
   const navigationItems = [
     {
-      href: "/",
+      href: "/dashboard",
       label: "Dashboard",
       icon: Home,
       description: "Main dashboard and current match",
@@ -61,15 +64,20 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2">
-                <span className="text-2xl">⚽</span>
+              <Link href="/dashboard" className="flex items-center space-x-2">
+                <Image
+                  src="/match-tracker.webp"
+                  alt="Match Tracker"
+                  width={64}
+                  height={38}
+                />
                 <span className="text-xl font-bold text-gray-800">
                   Match Tracker
                 </span>
@@ -218,6 +226,12 @@ const Navigation: React.FC<NavigationProps> = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1">{children}</main>
+
+      {/* Footer */}
+      <Footer />
+
+      {/* Unified Status Bar */}
+      <UnifiedStatusBar />
     </div>
   );
 };

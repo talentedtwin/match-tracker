@@ -359,7 +359,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
                             e.target.value || null
                           )
                         }
-                        className="text-sm px-2 py-1 border border-gray-300 rounded"
+                        className="text-sm px-2 py-1 border border-gray-300 text-gray-700 rounded"
                       >
                         <option value="">No team</option>
                         {teams.map((t) => (

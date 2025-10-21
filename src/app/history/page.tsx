@@ -107,7 +107,7 @@ const HistoryPage = () => {
               Start playing matches to see your history here
             </p>
             <Link
-              href="/"
+              href="/dashboard"
               className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
             >
               <svg
@@ -131,6 +131,7 @@ const HistoryPage = () => {
             matches={matches.map((match) => ({
               ...match,
               matchType: match.matchType as "league" | "cup",
+              venue: (match.venue as "home" | "away") || "home",
               playerStats: match.playerStats.map((stat) => ({
                 playerId: stat.playerId,
                 playerName: stat.player?.name || "Unknown Player",

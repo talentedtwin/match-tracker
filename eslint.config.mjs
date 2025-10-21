@@ -22,6 +22,13 @@ const eslintConfig = [
       "prisma/generated/**",
     ],
   },
+  {
+    files: ["next.config.js", "scripts/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-var-requires": "off",
+      "import/no-commonjs": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

@@ -33,7 +33,7 @@ const ScheduledMatches = lazy(
 
 const FootballTracker = () => {
   // Auth sync for fresh data on login
-  const { isAuthenticated } = useAuthSync({
+  useAuthSync({
     onLogin: () => {
       console.log("🔄 Login detected - refreshing dashboard data");
       // Force refresh all data after login
@@ -84,6 +84,7 @@ const FootballTracker = () => {
     goalsAgainst: number;
     isFinished: boolean;
     matchType: "league" | "cup";
+    venue: "home" | "away";
     selectedPlayerIds: string[];
     playerStats: Array<{
       playerId: string;
@@ -98,9 +99,19 @@ const FootballTracker = () => {
   // Load offline state on mount
   useEffect(() => {
     const offlineState = loadOfflineState();
-    if (offlineState && offlineState.currentMatch) {
-      setCurrentMatch(offlineState.currentMatch);
-      setTeamScore(offlineState.teamScore);
+    if (offlineState) {
+      // Only restore if there's actually a current match (not null)
+      if (offlineState.currentMatch) {
+        setCurrentMatch({
+          ...offlineState.currentMatch,
+          venue: "home", // Default to home for existing matches
+        });
+        setTeamScore(offlineState.teamScore || { for: 0, against: 0 });
+      } else {
+        // Ensure clean state if offline storage has null currentMatch
+        setCurrentMatch(null);
+        setTeamScore({ for: 0, against: 0 });
+      }
     }
   }, [loadOfflineState]);
 
@@ -116,10 +127,18 @@ const FootballTracker = () => {
           goalsAgainst: teamScore.against,
           isFinished: currentMatch.isFinished,
           matchType: currentMatch.matchType,
+          venue: currentMatch.venue,
           selectedPlayerIds: currentMatch.selectedPlayerIds,
           playerStats: currentMatch.playerStats,
         },
         teamScore: teamScore,
+        lastSaved: Date.now(),
+      });
+    } else {
+      // Clear offline storage when no current match
+      saveOfflineState({
+        currentMatch: null,
+        teamScore: { for: 0, against: 0 },
         lastSaved: Date.now(),
       });
     }
@@ -172,7 +191,8 @@ const FootballTracker = () => {
   // Handle starting a new match
   const handleStartNewMatch = async (
     opponent: string,
-    selectedPlayers: Player[]
+    selectedPlayers: Player[],
+    venue: "home" | "away"
   ) => {
     if (selectedPlayers.length === 0) {
       alert("Please select at least one player for this match");
@@ -188,6 +208,7 @@ const FootballTracker = () => {
       goalsAgainst: 0,
       isFinished: false,
       matchType: "league" as const,
+      venue,
       selectedPlayerIds: selectedPlayers.map((p) => p.id),
       playerStats: selectedPlayers.map((player) => ({
         playerId: player.id,
@@ -232,6 +253,13 @@ const FootballTracker = () => {
         });
 
         // Clear local state immediately to show match is "finished"
+        // Also explicitly clear offline storage
+        saveOfflineState({
+          currentMatch: null,
+          teamScore: { for: 0, against: 0 },
+          lastSaved: Date.now(),
+        });
+
         setCurrentMatch(null);
         setTeamScore({ for: 0, against: 0 });
         return;
@@ -250,6 +278,13 @@ const FootballTracker = () => {
 
       // Trigger a refetch of matches to update the UI
       await refetchMatches();
+
+      // Explicitly clear offline storage before clearing state
+      saveOfflineState({
+        currentMatch: null,
+        teamScore: { for: 0, against: 0 },
+        lastSaved: Date.now(),
+      });
 
       // Track match completion
       trackMatchEvent("match_completed", {
@@ -287,6 +322,13 @@ const FootballTracker = () => {
         });
 
         // Still clear local state to show match is "finished"
+        // Also explicitly clear offline storage
+        saveOfflineState({
+          currentMatch: null,
+          teamScore: { for: 0, against: 0 },
+          lastSaved: Date.now(),
+        });
+
         setCurrentMatch(null);
         setTeamScore({ for: 0, against: 0 });
       }
@@ -303,6 +345,11 @@ const FootballTracker = () => {
     isFinished?: boolean;
     goalsFor?: number;
     goalsAgainst?: number;
+    playerStats?: Array<{
+      playerId: string;
+      goals?: number;
+      assists?: number;
+    }>;
   }) => {
     try {
       await addMatch({
@@ -339,6 +386,7 @@ const FootballTracker = () => {
       goalsAgainst: 0,
       isFinished: false,
       matchType: scheduledMatch.matchType,
+      venue: scheduledMatch.venue,
       selectedPlayerIds: scheduledMatch.selectedPlayerIds,
       playerStats: selectedPlayers.map((player) => ({
         playerId: player.id,
@@ -388,6 +436,7 @@ const FootballTracker = () => {
         opponent: match.opponent,
         date: match.date,
         matchType: match.matchType as "league" | "cup",
+        venue: (match.venue as "home" | "away") || "home",
         notes: match.notes,
         selectedPlayerIds: match.selectedPlayerIds || [],
         isFinished: match.isFinished,
@@ -448,7 +497,7 @@ const FootballTracker = () => {
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
-            ⚽ Grassroots Match Tracker
+            Grassroots Match Tracker
           </h1>
           <p className="text-center text-gray-600">
             Track your team&apos;s performance
@@ -514,6 +563,7 @@ const FootballTracker = () => {
           matches={matches.map((match) => ({
             ...match,
             matchType: match.matchType as "league" | "cup",
+            venue: (match.venue as "home" | "away") || "home",
             playerStats: match.playerStats.map((stat) => ({
               playerId: stat.playerId,
               playerName: stat.player?.name || "Unknown Player",

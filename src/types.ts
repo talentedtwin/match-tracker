@@ -30,9 +30,11 @@ export interface Match {
   goalsAgainst: number;
   isFinished: boolean;
   matchType: "league" | "cup";
+  venue: "home" | "away";
   notes?: string;
   selectedPlayerIds: string[];
   playerStats: PlayerStat[];
+  team?: Team;
 }
 
 export interface ScheduledMatch {
@@ -40,9 +42,11 @@ export interface ScheduledMatch {
   opponent: string;
   date: string;
   matchType: "league" | "cup";
+  venue: "home" | "away";
   notes?: string;
   selectedPlayerIds: string[];
   isFinished: boolean;
+  team?: Team;
 }
 
 export interface TeamScore {

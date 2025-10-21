@@ -139,7 +139,7 @@ const ScheduledMatches: React.FC<ScheduledMatchesProps> = ({
                   {/* Match Header */}
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-800">
-                      vs {match.opponent}
+                      {match.team?.name || "Our Team"} vs {match.opponent}
                     </h3>
                     <div
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

@@ -31,6 +31,7 @@ export async function GET() {
     const matches = await withDatabaseUserContext(userId, async () => {
       return await prisma.match.findMany({
         include: {
+          team: true,
           playerStats: {
             include: {
               player: true,
@@ -41,9 +42,15 @@ export async function GET() {
       });
     });
 
-    // Decrypt player names before returning
+    // Decrypt player and team names before returning
     const matchesWithDecryptedNames = matches.map((match) => ({
       ...match,
+      team: match.team
+        ? {
+            ...match.team,
+            name: EncryptionService.decrypt(match.team.name),
+          }
+        : null,
       playerStats: match.playerStats.map((stat) => ({
         ...stat,
         player: stat.player
@@ -88,6 +95,7 @@ export async function POST(request: NextRequest) {
       goalsFor,
       goalsAgainst,
       matchType,
+      venue,
       notes,
       selectedPlayerIds,
       isFinished,
@@ -100,6 +108,14 @@ export async function POST(request: NextRequest) {
         throw new Error("Opponent is required");
       }
 
+      // Get the user's first team to associate with the match
+      const userTeam = await prisma.team.findFirst({
+        where: {
+          userId: userId,
+          isDeleted: false,
+        },
+      });
+
       const match = await prisma.match.create({
         data: {
           opponent,
@@ -107,10 +123,12 @@ export async function POST(request: NextRequest) {
           goalsFor: goalsFor || 0,
           goalsAgainst: goalsAgainst || 0,
           matchType: matchType || "league",
+          venue: venue || "home",
           notes: notes || null,
           selectedPlayerIds: selectedPlayerIds || [],
           isFinished: isFinished || false,
           userId,
+          teamId: userTeam?.id, // Associate with user's team if available
           playerStats: playerStats
             ? {
                 create: playerStats.map((stat: PlayerStatInput) => ({
@@ -122,6 +140,7 @@ export async function POST(request: NextRequest) {
             : undefined,
         },
         include: {
+          team: true,
           playerStats: {
             include: {
               player: true,
@@ -133,9 +152,15 @@ export async function POST(request: NextRequest) {
       return match;
     });
 
-    // Decrypt player names before returning
+    // Decrypt player and team names before returning
     const matchWithDecryptedNames = {
       ...newMatch,
+      team: newMatch.team
+        ? {
+            ...newMatch.team,
+            name: EncryptionService.decrypt(newMatch.team.name),
+          }
+        : null,
       playerStats: newMatch.playerStats.map((stat) => ({
         ...stat,
         player: stat.player
